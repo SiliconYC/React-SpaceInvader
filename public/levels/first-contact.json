@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "first-contact",
+  "metadata": {
+    "name": "第一关 · 初次接触",
+    "description": "初始静态侦察编队；后续阶段加入折返、攻击及多波次。"
+  },
+  "world": {
+    "width": 36,
+    "height": 24
+  },
+  "waves": [
+    {
+      "id": "scout-wave",
+      "spawnAtSeconds": 0,
+      "formation": {
+        "type": "scout",
+        "rows": 3,
+        "columns": 8,
+        "startX": 6.5,
+        "startY": 19.2,
+        "spacingX": 3.2,
+        "spacingY": 2.8
+      },
+      "movement": {
+        "horizontalSpeed": 2.4,
+        "descentPerTurn": 0.9
+      },
+      "attack": {
+        "shotsPerMinute": 10,
+        "projectileSpeed": 7
+      }
+    }
+  ],
+  "difficulty": {
+    "speedMultiplier": 1,
+    "fireRateMultiplier": 1
+  },
+  "victory": {
+    "type": "clear-all-waves"
+  }
+}
