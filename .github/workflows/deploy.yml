@@ -20,6 +20,8 @@ jobs:
           node-version: '22'
       - run: npm install --no-audit --no-fund
       - run: npm run verify
+      - name: 记录产物对应的 Git 提交
+        run: printf '%s\\n' "$GITHUB_SHA" > dist/build-sha.txt
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
@@ -32,3 +34,23 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: 检查线上 Pages 版本及静态资源
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://siliconyc.github.io/React-SpaceInvader"
+          live_sha=""
+          for attempt in $(seq 1 18); do
+            live_sha=$(curl --silent --show-error --fail --location --max-time 12 "$base/build-sha.txt" || true)
+            if [[ "$live_sha" == "$GITHUB_SHA" ]]; then break; fi
+            sleep 5
+          done
+          [[ "$live_sha" == "$GITHUB_SHA" ]] || { echo "::error::线上未更新到当前提交"; exit 1; }
+          curl --fail --silent --show-error --location "$base/" -o /tmp/invader-index.html
+          grep -q '/React-SpaceInvader/assets/' /tmp/invader-index.html
+          js_asset=$(grep -oE '/React-SpaceInvader/assets/[^"]+\\.js' /tmp/invader-index.html | head -n1)
+          [[ -n "$js_asset" ]]
+          curl --fail --silent --show-error --location "https://siliconyc.github.io$js_asset" -o /tmp/invader-app.js
+          test -s /tmp/invader-app.js
+          echo "线上已发布 $GITHUB_SHA；首页及 JS 资源可访问"
+
