@@ -49,3 +49,11 @@
 - [docs/ROADMAP.md](docs/ROADMAP.md)：P1 七项 Issue、依赖顺序、最小完整可玩闭环。
 
 每个 Issue 从 `dev` 建立独立短期分支，细粒度 Commit/Push，独立 PR 合并后部署 GitHub Pages，再验收增量。
+
+## P2/4 敌人行为与难度测量（Issue #23）
+
+- `scout`（初次接触）：单发、命中一次击毁、缓慢下降，新手练习。
+- `raider`（交叉火力首波）：JSON `behavior: {"armorHits":1,"volleySize":2}`，从不同存活列齐射两发；关卡降低了单位火力频次，以免突然变成满屏弹幕。
+- `guardian`（交叉火力次波）：JSON `behavior: {"armorHits":2,"volleySize":1}`，需两枚玩家子弹命中、第一次出现原创装甲击中反馈，击毁才得分；其速度与射速刻意降低，不以速度和数量双重加压。
+- 行为为 **v1 波次可选字段**：旧版省略则严格归一成 `armorHits=1`、`volleySize=1`，不改变 schemaVersion。指定时两项均必须是 1～3 的整数；未知字段、漏填、非法值一律报错。`src/core` 实现多列弹道与装甲耐久，WebGL 只呈现状态与事件。
+- `npm run measure:difficulty`：6 个固定种子，自动逐敌追踪射击，比较真实旧 P1 参数（在脚本内恢复，不修改生产 JSON）与当前 P2，两关各统计终局、耗时、玩家/敌弹数、命中/击毁、积分。结果记在 Actions `verify` 的执行日志中；**它是可重复机器人基准，不是人类玩家体验证明**。

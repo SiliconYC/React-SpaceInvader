@@ -265,6 +265,8 @@ export class BattlefieldRenderer {
       mesh.position.copy(toDisplayXY(enemy.position, state.world));
     }
     this.host.dataset.enemyCount = String(this.enemyMeshes.size);
+    this.host.dataset.enemyHp = String(state.enemies[0]?.hp ?? '');
+    this.host.dataset.enemyMaxHp = String(state.enemies[0]?.maxHp ?? '');
     this.host.dataset.enemyKinds = [...new Set(state.enemies.map(e => e.type))].sort().join(',');
     this.host.dataset.gpuAssets = String(this.resources.length);
     this.host.dataset.enemyFirstX = state.enemies[0]?.position.x.toFixed(4) ?? '';

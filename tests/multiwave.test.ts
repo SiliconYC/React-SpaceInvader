@@ -15,6 +15,8 @@ function duel(options: { secondAt?: number; shots?: number } = {}) {
   raw.waves[1].formation = { ...raw.waves[1].formation, rows: 1, columns: 1, startX: 18, startY: 12 };
   raw.waves[0].movement.horizontalSpeed = 0;
   raw.waves[1].movement.horizontalSpeed = 0;
+  // 波次调度测试保留一击即可击毁的专用配置；护甲行为在 #23 单独测试。
+  raw.waves[1].behavior.armorHits = 1;
   raw.waves[0].attack.shotsPerMinute = 0;
   raw.waves[1].attack.shotsPerMinute = options.shots ?? 0;
   raw.waves[1].spawnAtSeconds = options.secondAt ?? 2;

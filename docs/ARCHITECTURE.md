@@ -75,3 +75,8 @@ Issue #5 已证实仅修改 `public/levels/first-contact.json` 的 `formation` �
 ## P2 #22 轻量战斗视觉反馈
 
 `src/render/CombatFX.ts` 只消费 `GameEvent` 和只读快照：开火小闪、敌机击毁碎片、玩家受击闪光、波次启动短促低强度环形脉冲、胜败淡化光圈；不增音乐、不产生任何命中规则。每次效果由完整事件标识去重（最多记录最近 512 条），全局同时活动实例上限 72，所有粒子共享预先分配的两套几何和五种材质，没有音视频定时器、渲染器外 RAF 或每帧新建 GPU 资产。视觉寿命最高 800ms；暂停和重置清空特效，切关/卸载自动 `dispose()`。降低动态效果选项 `prefers-reduced-motion` 限制粒子。仅波次切换时正交相机最多 1.2%/550ms 的轻脉冲，战斗过程保持完全静止。浏览器实拍快照及数据属性（fx active/emitted/kind/gpu assets）对生命周期进行回归；逻辑 seed/tick/collision/score 完全由原 `GameEngine` 维护。
+
+## P2 #23 行为差异和可重复难度回归
+
+`WavePlan.behavior` 以 v1 **可选** JSON 字段支持 `armorHits` 和 `volleySize`（各 1～3 整数，省略默认 1/1），不破坏存量配置，未来不兼容更新应另开 schemaVersion 并显式迁移。规则层 `EnemyState.hp/maxHp` 保留唯一敌机 ID，第一次装甲命中触发 `enemy-damaged`，只在耐久归零时 `enemy-hit` 加一次分。齐射只从不同存活的底部敌机列发射，按单个随机索引+确定性间隔选择位置，不改变二维物理和游戏种子。FX 为伤害显示 amber 小环，不决定耐久。
+`scripts/measure-difficulty.mjs` 在 CI `verify` 中比较 P1 初始 JSON 数值与当前 v1 更新：6 个指定种子、同一个追踪射击自动玩家、固定 60Hz、最长 70s，输出玩家/敌方发射数、受伤、击毁、装甲受损、得分、终局和耗时。机器人并不等同真人；自然实玩需要后续人工观察。两关全部字段仍受严格 parser 与 Chromium 回归保护。

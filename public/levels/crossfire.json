@@ -3,7 +3,7 @@
   "id": "crossfire",
   "metadata": {
     "name": "第二关 · 交叉火力",
-    "description": "双波次，袭击机高速反向突入，后续重装机持续压迫。"
+    "description": "第二关：双波次，袭击机双列齐射，重装守卫机需两次命中。"
   },
   "world": {
     "width": 36,
@@ -29,8 +29,12 @@
         "moveEveryTicks": 2
       },
       "attack": {
-        "shotsPerMinute": 14,
-        "projectileSpeed": 9
+        "shotsPerMinute": 10,
+        "projectileSpeed": 8.5
+      },
+      "behavior": {
+        "armorHits": 1,
+        "volleySize": 2
       }
     },
     {
@@ -46,20 +50,24 @@
         "spacingY": 3
       },
       "movement": {
-        "horizontalSpeed": 6,
+        "horizontalSpeed": 5,
         "descentPerTurn": 1,
         "startDirection": 1,
         "moveEveryTicks": 1
       },
       "attack": {
-        "shotsPerMinute": 26,
+        "shotsPerMinute": 18,
         "projectileSpeed": 12
+      },
+      "behavior": {
+        "armorHits": 2,
+        "volleySize": 1
       }
     }
   ],
   "difficulty": {
-    "speedMultiplier": 1.2,
-    "fireRateMultiplier": 1.25
+    "speedMultiplier": 1.12,
+    "fireRateMultiplier": 1.15
   },
   "victory": {
     "type": "clear-all-waves"

@@ -6,13 +6,13 @@ export class LevelValidationError extends Error {
   constructor(message: string) { super('关卡数据无效：' + message); this.name = 'LevelValidationError'; }
 }
 type Obj = Record<string, unknown>;
-function obj(value: unknown, path: string, keys: readonly string[]): Obj {
+function obj(value: unknown, path: string, keys: readonly string[], optional: readonly string[] = []): Obj {
   if (value === null || typeof value !== 'object' || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) {
     throw new LevelValidationError(path + ' 必须是对象');
   }
   const record = value as Obj;
   for (const key of keys) if (!(key in record)) throw new LevelValidationError(path + ' 缺少 ' + key);
-  for (const key of Object.keys(record)) if (!keys.includes(key)) throw new LevelValidationError(path + ' 包含未知字段 ' + key);
+  for (const key of Object.keys(record)) if (!keys.includes(key) && !optional.includes(key)) throw new LevelValidationError(path + ' 包含未知字段 ' + key);
   return record;
 }
 function num(v: unknown, path: string, min: number, max: number, integer = false): number {
@@ -57,7 +57,7 @@ export function parseLevel(input: unknown): LevelPlan {
   let sumEnemies = 0;
   const waves: WavePlan[] = root.waves.map((entry, index) => {
     const p = 'waves[' + index + ']';
-    const wave = obj(entry, p, ['id', 'spawnAtSeconds', 'formation', 'movement', 'attack']);
+    const wave = obj(entry, p, ['id', 'spawnAtSeconds', 'formation', 'movement', 'attack'], ['behavior']);
     const waveId = id(wave.id, p + '.id');
     if (seen.has(waveId)) throw new LevelValidationError(p + '.id 重复');
     seen.add(waveId);
@@ -83,6 +83,8 @@ export function parseLevel(input: unknown): LevelPlan {
         throw new LevelValidationError(p + '.formation 编队越界或侵入玩家区域');
       }
     }
+    const behavior = wave.behavior === undefined ? {armorHits: 1, volleySize: 1} :
+      obj(wave.behavior, p + '.behavior', ['armorHits', 'volleySize']);
     const m = obj(wave.movement, p + '.movement', ['horizontalSpeed', 'descentPerTurn', 'startDirection', 'moveEveryTicks']);
     const a = obj(wave.attack, p + '.attack', ['shotsPerMinute', 'projectileSpeed']);
     return Object.freeze({
@@ -96,6 +98,10 @@ export function parseLevel(input: unknown): LevelPlan {
           return m.startDirection;
         })(),
         moveEveryTicks: num(m.moveEveryTicks, p + '.movement.moveEveryTicks', 1, 30, true),
+      }),
+      behavior: Object.freeze({
+        armorHits: num(behavior.armorHits, p + '.behavior.armorHits', 1, 3, true),
+        volleySize: num(behavior.volleySize, p + '.behavior.volleySize', 1, 3, true),
       }),
       attack: Object.freeze({
         shotsPerMinute: num(a.shotsPerMinute, p + '.attack.shotsPerMinute', 0, 240),
