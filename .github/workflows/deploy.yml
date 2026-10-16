@@ -18,7 +18,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install --no-audit --no-fund
+          cache: npm
+      - run: npm ci --no-audit --no-fund
       - run: npm run verify
       - name: 记录产物对应的 Git 提交
         run: echo "$GITHUB_SHA" > dist/build-sha.txt
@@ -53,4 +54,15 @@ jobs:
           curl --fail --silent --show-error --location "https://siliconyc.github.io$js_asset" -o /tmp/invader-app.js
           test -s /tmp/invader-app.js
           echo "线上已发布 $GITHUB_SHA；首页及 JS 资源可访问"
-
+      - name: 线上 Chromium 与 WebGL 验收
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install chromium --with-deps
+      - name: 实测部署后的 Pages（场景、命令、缩放、控制台异常）
+        run: npm run test:browser
+        env:
+          E2E_BASE_URL: https://siliconyc.github.io/React-SpaceInvader/
