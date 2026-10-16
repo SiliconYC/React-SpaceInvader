@@ -66,3 +66,13 @@ jobs:
         run: npm run test:browser
         env:
           E2E_BASE_URL: https://siliconyc.github.io/React-SpaceInvader/
+      - name: 上传真实浏览器截屏留痕
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-live-baseline-${{ github.sha }}
+          path: |
+            test-results/**/desktop-baseline.png
+            test-results/**/narrow-baseline.png
+          retention-days: 7
+          if-no-files-found: ignore
