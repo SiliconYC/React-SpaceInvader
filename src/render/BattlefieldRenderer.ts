@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { GameSnapshot, GameEvent } from '../core/engine.ts';
 import type { EnemyKind, EnemyState } from '../core/level.ts';
 import type { Point2, World2 } from '../core/world.ts';
+import { createShipTemplates } from './ShipModels.ts';
 
 /** 世界坐标在二维，z 仅为渲染层深度，不参与任何游戏规则。 */
 export function toDisplayXY(point: Point2, world: World2): THREE.Vector3 {
@@ -16,7 +17,8 @@ export class BattlefieldRenderer {
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
   private readonly grid: THREE.LineSegments;
   private readonly playerMesh: THREE.Group;
-  private readonly enemyMeshes = new Map<string, THREE.Mesh>();
+  private readonly enemyMeshes = new Map<string, THREE.Group>();
+  private readonly enemyTemplates: Readonly<Record<EnemyKind, THREE.Group>>;
   private readonly projectileMeshes = new Map<number, THREE.Mesh>();
   private readonly enemyProjectileMeshes = new Map<number, THREE.Mesh>();
   private readonly enemyBulletMaterial: THREE.MeshStandardMaterial;
@@ -98,39 +100,29 @@ export class BattlefieldRenderer {
     this.grid.visible = false;
     this.scene.add(this.grid);
 
-    // 独立三维显示对象：飞船坐标只能来自 GameSnapshot 的二维位置。
-    this.playerMesh = new THREE.Group();
-    const silhouette = new THREE.Shape();
-    silhouette.moveTo(0, 0.68);
-    silhouette.lineTo(-0.26, 0.22);
-    silhouette.lineTo(-1.2, -0.44);
-    silhouette.lineTo(-0.78, -0.65);
-    silhouette.lineTo(0, -0.32);
-    silhouette.lineTo(0.78, -0.65);
-    silhouette.lineTo(1.2, -0.44);
-    silhouette.lineTo(0.26, 0.22);
-    silhouette.closePath();
-    const hull = new THREE.ExtrudeGeometry(silhouette, {
-      depth: 0.32, bevelEnabled: true, bevelSegments: 1, steps: 1,
-      bevelSize: 0.065, bevelThickness: 0.07,
-    });
-    const hullMaterial = new THREE.MeshStandardMaterial({
-      color: 0x60d5e4, emissive: 0x14546b, emissiveIntensity: 0.48,
-      metalness: 0.65, roughness: 0.28,
-    });
-    this.resources.push(hull, hullMaterial);
-    this.playerMesh.add(new THREE.Mesh(hull, hullMaterial));
-    const cockpitGeometry = new THREE.SphereGeometry(0.23, 12, 8);
-    const cockpitMaterial = new THREE.MeshStandardMaterial({
-      color: 0xe4f9ff, emissive: 0x3b9ac2, emissiveIntensity: 0.4,
-      metalness: 0.15, roughness: 0.27,
-    });
-    this.resources.push(cockpitGeometry, cockpitMaterial);
-    const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
-    cockpit.position.set(0, 0.03, 0.42);
-    cockpit.scale.set(0.75, 1.15, 0.55);
-    this.playerMesh.add(cockpit);
+    // 原创 3D 舰船与三种不同体积和轮廓的敌机；同型号克隆共享 GPU 资源。
+    const templates = createShipTemplates(this.resources);
+    this.playerMesh = templates.player;
+    this.enemyTemplates = templates.enemies;
     this.scene.add(this.playerMesh);
+    this.scene.add(new THREE.HemisphereLight(0xb5d9ef, 0x10192a, .55));
+    const rim = new THREE.DirectionalLight(0x82d8ef, .75);
+    rim.position.set(8,-5,11);
+    this.scene.add(rim);
+
+    // 少量低对比空间尘点；不产生网格感，也不覆盖战斗或改变相机。
+    const points: number[] = [];
+    for (let i = 0; i < 72; i++) {
+      const h1 = ((i*701+173) % 997)/997;
+      const h2 = ((i*479+67) % 991)/991;
+      points.push((h1-.5)*this.world.width, (h2-.5)*this.world.height, -.05);
+    }
+    const dust = new THREE.BufferGeometry();
+    dust.setAttribute('position',new THREE.Float32BufferAttribute(points,3));
+    const dustMat = new THREE.PointsMaterial({color:0x365672,size:.055,transparent:true,opacity:.3,
+      sizeAttenuation:true,depthWrite:false});
+    this.resources.push(dust,dustMat);
+    this.scene.add(new THREE.Points(dust,dustMat));
 
     this.bulletGeometry = new THREE.CapsuleGeometry(0.10, 0.35, 4, 8);
     this.bulletMaterial = new THREE.MeshStandardMaterial({
@@ -285,56 +277,29 @@ export class BattlefieldRenderer {
       mesh.position.copy(toDisplayXY(enemy.position, state.world));
     }
     this.host.dataset.enemyCount = String(this.enemyMeshes.size);
+    this.host.dataset.enemyKinds = [...new Set(state.enemies.map(e => e.type))].sort().join(',');
+    this.host.dataset.gpuAssets = String(this.resources.length);
     this.host.dataset.enemyFirstX = state.enemies[0]?.position.x.toFixed(4) ?? '';
     this.host.dataset.enemyFirstY = state.enemies[0]?.position.y.toFixed(4) ?? '';
     this.host.dataset.enemyDirection = String(state.formationDirection);
     this.host.dataset.enemyTurns = String(state.formationTurns);
   }
 
-  private createEnemyMesh(enemy: EnemyState): THREE.Mesh {
-    const type: EnemyKind = enemy.type;
-    const width = enemy.width;
-    const height = enemy.height;
-    const outline = new THREE.Shape();
-    // 原创简洁轮廓，保留 3D 厚度与光照而不引入额外维度玩法。
-    if (type === 'scout') {
-      outline.moveTo(-width * 0.46, height * 0.18);
-      outline.lineTo(-width * 0.25, -height * 0.4);
-      outline.lineTo(0, -height * 0.2);
-      outline.lineTo(width * 0.25, -height * 0.4);
-      outline.lineTo(width * 0.46, height * 0.18);
-      outline.lineTo(0, height * 0.42);
-    } else if (type === 'raider') {
-      outline.moveTo(-width * 0.5, 0);
-      outline.lineTo(-width * 0.27, -height * 0.44);
-      outline.lineTo(width * 0.27, -height * 0.44);
-      outline.lineTo(width * 0.5, 0);
-      outline.lineTo(width * 0.27, height * 0.44);
-      outline.lineTo(-width * 0.27, height * 0.44);
-    } else {
-      outline.moveTo(-width * 0.44, height * 0.33);
-      outline.lineTo(-width * 0.48, -height * 0.32);
-      outline.lineTo(width * 0.48, -height * 0.32);
-      outline.lineTo(width * 0.44, height * 0.33);
-    }
-    outline.closePath();
-    const geometry = new THREE.ExtrudeGeometry(outline, {
-      depth: 0.23, bevelEnabled: true, bevelSegments: 1, steps: 1,
-      bevelSize: 0.045, bevelThickness: 0.055,
-    });
-    const color = type === 'scout' ? 0xe3a16d : type === 'raider' ? 0xdd719c : 0xa591db;
-    const material = new THREE.MeshStandardMaterial({
-      color, emissive: color, emissiveIntensity: 0.13,
-      metalness: 0.36, roughness: 0.45,
-    });
-    this.resources.push(geometry, material);
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.userData.enemyId = enemy.id;
-    return mesh;
+  private createEnemyMesh(enemy: EnemyState): THREE.Group {
+    // clone() 按引用共享 BufferGeometry/Material；逐个销毁敌机仅需 scene.remove。
+    const model = this.enemyTemplates[enemy.type].clone(true);
+    model.userData.enemyId = enemy.id;
+    model.userData.modelKind = enemy.type;
+    return model;
   }
 
   dispose(): void {
     this.observer.disconnect();
+    for (const mesh of this.enemyMeshes.values()) this.scene.remove(mesh);
+    this.enemyMeshes.clear();
+    this.projectileMeshes.clear();
+    this.enemyProjectileMeshes.clear();
+    this.flashes.length = 0;
     for (const resource of this.resources) resource.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();

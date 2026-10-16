@@ -67,3 +67,7 @@ Issue #5 已证实仅修改 `public/levels/first-contact.json` 的 `formation` �
 `public/levels/index.json` 是版本化列表（ID、简体中文名称/简介），`src/levels/catalog.ts` 以严格模式校验唯一、受限的同源文件名，不接受额外字段和路径跳转；`loadLevel` 对目标文件进行 v1 解析，并核实内部 ID 与请求名称一致。至少包含 `first-contact.json`（一波）和 `crossfire.json`（两波、不同机型、速度/火力/难度）。选项以 JSON 清单驱动，React 不硬编码第二关名称或阵列；加载成功才替换旧引擎/渲染会话，无效文件保留旧状态并显示中文错误。
 
 引擎中的 `currentWaveIndex`、`pendingWaves` 与 `waveStartedAtTick` 只接受 `LevelPlan.waves` 数据。必须上一波被击落清空且逻辑 `tick >= ceil(spawnAtSeconds × 60)` 后才能生成下一波；若前一波较晚清空，则立即进入符合时序的后续波。波次更替保留分数/生命/种子连续性，清理跨波射弹，重新绑定本波移动、射速和方向，并发送结构化 `wave-started` 事件。等待期间继续计时、可暂停、未完成全部波次绝不提前胜利。最终波全灭才触发胜利；重置回到第一波及初始种子。版本升级必须单独提供迁移器及新测试，不能静默接受未知字段。
+
+## P2 #21 模型与资源基线
+
+`src/render/ShipModels.ts` 一次性创建玩家机、轻型 scout、双舱 raider、装甲 guardian 四种结构不同的原创 3D 模型原型。通过 `Group.clone(true)` 实例化敌机，所有同型号实例 **共享 BufferGeometry/Material**，不在每次出现/每帧分别分配，死亡从 scene 移除；切关调用 renderer.dispose 统一释放会话级纹理/几何/材质。程序生成稀疏低亮尘点和补光；正交相机保证 `(x,y)` 瞄准、边界与此前完全一致，三维轮廓绝不参与碰撞。模型截图与 GPU 资产计数由 `tests/models.browser.spec.ts` 捕获；逻辑玩法没有修改。
