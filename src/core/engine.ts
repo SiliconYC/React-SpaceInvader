@@ -59,6 +59,8 @@ export type GameEvent =
   | { readonly type: 'game-reset'; readonly tick: 0 }
   | { readonly type: 'shot-fired'; readonly bulletId: number; readonly tick: number }
   | { readonly type: 'enemy-shot-fired'; readonly bulletId: number; readonly enemyId: string; readonly tick: number }
+  | { readonly type: 'enemy-damaged'; readonly tick: number; readonly bulletId: number;
+      readonly enemyId: string; readonly hp: number; readonly maxHp: number; readonly position: Readonly<Point2> }
   | { readonly type: 'enemy-hit'; readonly tick: number; readonly bulletId: number;
       readonly enemyId: string; readonly points: number; readonly position: Readonly<Point2> }
   | { readonly type: 'player-hit'; readonly tick: number; readonly bulletId: number;
@@ -96,6 +98,7 @@ export class GameEngine {
   private formationSettings: WavePlan['movement'] | null;
   private readonly formationSpeedMultiplier: number;
   private enemyAttack: WavePlan['attack'] | null;
+  private enemyBehavior: WavePlan['behavior'] | null;
   private enemyShotInterval: number | null;
   private nextEnemyShotTick: number | null;
   private formationDirection: FormationDirection;
@@ -134,6 +137,7 @@ export class GameEngine {
     this.formationSpeedMultiplier = level?.difficulty.speedMultiplier ?? 1;
     this.formationDirection = this.formationSettings?.startDirection ?? 1;
     this.enemyAttack = level?.waves[0].attack ?? null;
+    this.enemyBehavior = level?.waves[0].behavior ?? null;
     const shotsPerMinute = (this.enemyAttack?.shotsPerMinute ?? 0) * (level?.difficulty.fireRateMultiplier ?? 1);
     this.enemyShotInterval = shotsPerMinute > 0 ? Math.max(1, Math.round(3600 / shotsPerMinute)) : null;
     this.nextEnemyShotTick = this.enemyShotInterval;
@@ -199,6 +203,7 @@ export class GameEngine {
       this.pendingWaves = Math.max(0, (this.levelPlan?.waves.length ?? 1) - 1);
       this.formationSettings = this.levelPlan?.waves[0].movement ?? null;
       this.enemyAttack = this.levelPlan?.waves[0].attack ?? null;
+      this.enemyBehavior = this.levelPlan?.waves[0].behavior ?? null;
       const shotsPerMinute = (this.enemyAttack?.shotsPerMinute ?? 0) * (this.levelPlan?.difficulty.fireRateMultiplier ?? 1);
       this.enemyShotInterval = shotsPerMinute > 0 ? Math.max(1, Math.round(3600 / shotsPerMinute)) : null;
       this.formationDirection = this.formationSettings?.startDirection ?? 1;
@@ -291,6 +296,7 @@ export class GameEngine {
     this.formationDirection = next.movement.startDirection;
     this.formationTurns = 0;
     this.enemyAttack = next.attack;
+    this.enemyBehavior = next.behavior;
     const shotsPerMinute = next.attack.shotsPerMinute * this.levelPlan.difficulty.fireRateMultiplier;
     this.enemyShotInterval = shotsPerMinute > 0 ? Math.max(1, Math.round(3600 / shotsPerMinute)) : null;
     this.nextEnemyShotTick = this.enemyShotInterval === null ? null : this.tick + this.enemyShotInterval;
@@ -332,19 +338,32 @@ export class GameEngine {
       }
       if (first !== null) {
         const hit = first.enemy;
-        alive.delete(hit.id);
-        const points = ENEMY_POINTS[hit.type];
-        this.score += points;
-        this.events.push({
-          type: 'enemy-hit', tick: this.tick, bulletId: bullet.id,
-          enemyId: hit.id, points,
-          position: Object.freeze({ x: hit.position.x, y: hit.position.y }),
-        });
+        if (hit.hp > 1) {
+          const updated = Object.freeze({ ...hit, hp: hit.hp - 1 });
+          alive.set(hit.id, updated);
+          this.events.push({
+            type: 'enemy-damaged', tick: this.tick, bulletId: bullet.id,
+            enemyId: hit.id, hp: updated.hp, maxHp: updated.maxHp,
+            position: Object.freeze({ ...hit.position }),
+          });
+        } else {
+          alive.delete(hit.id);
+          const points = ENEMY_POINTS[hit.type];
+          this.score += points;
+          this.events.push({
+            type: 'enemy-hit', tick: this.tick, bulletId: bullet.id,
+            enemyId: hit.id, points,
+            position: Object.freeze({ x: hit.position.x, y: hit.position.y }),
+          });
+        }
       } else if (end.y - bullet.height / 2 <= this.world.height) {
         survivors.push(Object.freeze({ ...bullet, position: Object.freeze(end) }));
       }
     }
-    this.enemies = Object.freeze(this.enemies.filter(enemy => alive.has(enemy.id)));
+    this.enemies = Object.freeze(this.enemies.flatMap(enemy => {
+      const updated = alive.get(enemy.id);
+      return updated ? [updated] : [];
+    }));
     this.projectiles = Object.freeze(survivors);
   }
 
@@ -361,17 +380,25 @@ export class GameEngine {
       if (!previous || enemy.position.y < previous.position.y) columns.set(column, enemy);
     }
     const shooters = [...columns.values()].sort((a, b) => a.position.x - b.position.x || a.id.localeCompare(b.id));
-    const shooter = shooters[Math.floor(this.nextRandom() * shooters.length)];
-    const bullet = Object.freeze({
-      id: ++this.enemyProjectileSerial,
-      position: Object.freeze({
-        x: shooter.position.x,
-        y: shooter.position.y - shooter.height / 2 - SHOT_HEIGHT / 2,
-      }),
-      width: SHOT_WIDTH, height: SHOT_HEIGHT,
-    });
-    this.enemyProjectiles = Object.freeze([...this.enemyProjectiles, bullet]);
-    this.events.push({ type: 'enemy-shot-fired', bulletId: bullet.id, enemyId: shooter.id, tick: this.tick });
+    const start = Math.floor(this.nextRandom() * shooters.length);
+    const volleySize = Math.min(this.enemyBehavior?.volleySize ?? 1, shooters.length);
+    const volley: ProjectileState[] = [];
+    for (let i = 0; i < volleySize; i++) {
+      // Spread shots over distinct living columns. Single shot behavior preserves P1 RNG path.
+      const index = (start + i * Math.max(1, Math.floor(shooters.length / volleySize))) % shooters.length;
+      const shooter = shooters[index];
+      const bullet = Object.freeze({
+        id: ++this.enemyProjectileSerial,
+        position: Object.freeze({
+          x: shooter.position.x,
+          y: shooter.position.y - shooter.height / 2 - SHOT_HEIGHT / 2,
+        }),
+        width: SHOT_WIDTH, height: SHOT_HEIGHT,
+      });
+      volley.push(bullet);
+      this.events.push({ type: 'enemy-shot-fired', bulletId: bullet.id, enemyId: shooter.id, tick: this.tick });
+    }
+    this.enemyProjectiles = Object.freeze([...this.enemyProjectiles, ...volley]);
   }
 
   private updateEnemyProjectiles(previousPlayer: Point2): void {

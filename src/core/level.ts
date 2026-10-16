@@ -13,6 +13,8 @@ export interface EnemyState {
   readonly position: Readonly<Point2>;
   readonly width: number;
   readonly height: number;
+  readonly hp: number;
+  readonly maxHp: number;
 }
 export interface WavePlan {
   readonly id: string;
@@ -25,6 +27,8 @@ export interface WavePlan {
   }>;
   readonly movement: Readonly<{ horizontalSpeed: number; descentPerTurn: number; startDirection: -1 | 1; moveEveryTicks: number }>;
   readonly attack: Readonly<{ shotsPerMinute: number; projectileSpeed: number }>;
+  /** v1 可选字段行为默认归一到 1：装甲耐久、单次多列齐射数。 */
+  readonly behavior: Readonly<{ armorHits: number; volleySize: number }>;
 }
 export interface LevelPlan {
   readonly schemaVersion: 1;
@@ -50,6 +54,7 @@ export function waveEnemies(level: LevelPlan, index: number): readonly EnemyStat
         type: f.type,
         position: Object.freeze({ x: f.startX + col * f.spacingX, y: f.startY - row * f.spacingY }),
         width: size.width, height: size.height,
+        hp: wave.behavior.armorHits, maxHp: wave.behavior.armorHits,
       }));
     }
   }
