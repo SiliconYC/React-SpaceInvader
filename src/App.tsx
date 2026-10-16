@@ -3,6 +3,7 @@ import { GameEngine, type GameCommand, type GameSnapshot } from './core/engine.t
 import { BattlefieldRenderer } from './render/BattlefieldRenderer.ts';
 import { KeyboardController } from './input/KeyboardController.ts';
 import { loadLevel } from './levels/load.ts';
+import { loadLevelCatalog, type LevelCatalog } from './levels/catalog.ts';
 
 const GAME_SEED = 20261017;
 const LABELS: Record<GameSnapshot['phase'], string> = {
@@ -10,73 +11,99 @@ const LABELS: Record<GameSnapshot['phase'], string> = {
   won: '胜利', lost: '失败',
 };
 
+interface Session { stop(): void }
+
 export default function App() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const rendererRef = useRef<BattlefieldRenderer | null>(null);
   const keyboardRef = useRef<KeyboardController | null>(null);
+  const sessionRef = useRef<Session | null>(null);
+
   const [webgl, setWebgl] = useState<'ready' | 'error' | 'loading'>('loading');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [levelName, setLevelName] = useState('关卡加载中');
+  const [catalog, setCatalog] = useState<LevelCatalog | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [debug, setDebug] = useState(() => new URLSearchParams(window.location.search).has('debug'));
   const [state, setState] = useState<GameSnapshot>(() => new GameEngine(GAME_SEED).snapshot());
 
+  // 列表也由同源 JSON 决定，不在组件中写死第二关文件名/显示文本。
+  useEffect(() => {
+    const abort = new AbortController();
+    void loadLevelCatalog(abort.signal).then(list => {
+      if (abort.signal.aborted) return;
+      setCatalog(list);
+      setSelectedId(list.levels[0].id);
+    }).catch(error => {
+      if (!abort.signal.aborted) {
+        setLoadError(error instanceof Error ? error.message : '关卡清单加载失败');
+      }
+    });
+    return () => abort.abort();
+  }, []);
+
+  // 切换选项时先校验完整 JSON，成功后才替换引擎与 WebGL 会话。
+  // 请求失败不清空正在显示的合法旧关卡；旧请求通过 AbortController 取消。
   useEffect(() => {
     const host = viewportRef.current;
-    if (!host) return;
+    if (!selectedId || !host) return;
     const abort = new AbortController();
-    let disposed = false;
-    let raf = 0;
-    let lastTime: number | null = null;
-    let lastUi = 0;
-    let scene: BattlefieldRenderer | null = null;
-    let keyboard: KeyboardController | null = null;
-
-    // 缺失或无效关卡必须明确报错，不回退到硬编码敌阵。
-    void loadLevel('first-contact', abort.signal).then(level => {
-      if (disposed) return;
+    setLoadError(null);
+    void loadLevel(selectedId, abort.signal).then(level => {
+      if (abort.signal.aborted) return;
       const engine = new GameEngine(GAME_SEED, level.world, level);
-      scene = new BattlefieldRenderer(host, engine.snapshot());
+      sessionRef.current?.stop();
+      const scene = new BattlefieldRenderer(host, engine.snapshot());
+      scene.setDebugVisible(new URLSearchParams(window.location.search).has('debug'));
+      const keyboard = new KeyboardController(command => { engine.dispatch(command); });
       engineRef.current = engine;
       rendererRef.current = scene;
-      scene.setDebugVisible(new URLSearchParams(window.location.search).has('debug'));
-      keyboard = new KeyboardController(command => { engine.dispatch(command); });
       keyboardRef.current = keyboard;
-      setLevelName(level.metadata.name);
-      setState(engine.snapshot());
-      setWebgl('ready');
 
+      let raf = 0;
+      let lastTime: number | null = null;
+      let lastUi = 0;
+      const onVisibility = () => { lastTime = null; };
+      document.addEventListener('visibilitychange', onVisibility);
       const animate = (time: number) => {
         if (lastTime !== null) engine.advanceFrame(Math.min((time - lastTime) / 1000, 0.25));
         lastTime = time;
-        keyboard?.setEnabled(engine.snapshot().phase === 'running');
-        scene?.consumeEvents(engine.drainEvents());
-        scene?.render(engine.snapshot());
-        if (time - lastUi > 120) {
+        keyboard.setEnabled(engine.snapshot().phase === 'running');
+        scene.consumeEvents(engine.drainEvents());
+        scene.render(engine.snapshot());
+        if (time - lastUi >= 120) {
           setState(engine.snapshot());
           lastUi = time;
         }
         raf = requestAnimationFrame(animate);
       };
       raf = requestAnimationFrame(animate);
+      sessionRef.current = {
+        stop: () => {
+          cancelAnimationFrame(raf);
+          document.removeEventListener('visibilitychange', onVisibility);
+          keyboard.dispose();
+          scene.dispose();
+          if (engineRef.current === engine) engineRef.current = null;
+          if (rendererRef.current === scene) rendererRef.current = null;
+          if (keyboardRef.current === keyboard) keyboardRef.current = null;
+        },
+      };
+      setLevelName(level.metadata.name);
+      setState(engine.snapshot());
+      setWebgl('ready');
     }).catch(error => {
-      if (disposed || abort.signal.aborted) return;
+      if (abort.signal.aborted) return;
       setLoadError(error instanceof Error ? error.message : '关卡加载失败：未知错误');
+      if (!sessionRef.current) setWebgl('error');
     });
+    return () => abort.abort();
+  }, [selectedId]);
 
-    const onVisibility = () => { lastTime = null; };
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      disposed = true;
-      abort.abort();
-      cancelAnimationFrame(raf);
-      document.removeEventListener('visibilitychange', onVisibility);
-      engineRef.current = null;
-      rendererRef.current = null;
-      keyboard?.dispose();
-      keyboardRef.current = null;
-      scene?.dispose();
-    };
+  useEffect(() => () => {
+    sessionRef.current?.stop();
+    sessionRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -101,7 +128,14 @@ export default function App() {
       <header className="game-header">
         <div className="brand">
           <h1>侵略者</h1>
-          <span className="preview-label" data-testid="level-name">{levelName}</span>
+          {catalog && (
+            <select data-testid="level-select" className="level-select" aria-label="选择关卡"
+              value={selectedId ?? ''} disabled={state.phase === 'running' || state.phase === 'paused'}
+              onChange={event => setSelectedId(event.target.value)}>
+              {catalog.levels.map(entry => <option value={entry.id} key={entry.id}>{entry.name}</option>)}
+            </select>
+          )}
+          <span className="sr-only" data-testid="level-name">{levelName}</span>
         </div>
         <button className="debug-toggle" type="button" aria-pressed={debug}
           onClick={() => setDebug(value => !value)}>{debug ? '关闭调试' : '调试'}</button>
@@ -109,9 +143,16 @@ export default function App() {
 
       <div className="score-hud" aria-label="游戏成绩">
         <span data-testid="score">分数 <strong>{state.score}</strong></span>
+        <span className="wave-hud" data-testid="wave-status">波次 {state.currentWave}/{state.totalWaves}</span>
         <span className="life-indicator" data-testid="lives">生命 <strong>{state.lives}</strong></span>
       </div>
+      {state.phase === 'ready' && catalog && !loadError &&
+        <p className="level-description" data-testid="level-description">
+          {catalog.levels.find(entry => entry.id === selectedId)?.description}
+        </p>}
       {loadError && <div role="alert" data-testid="level-error" className="level-error">{loadError}</div>}
+      {state.waitingForWave && state.phase === 'running' &&
+        <div className="wave-wait" data-testid="wave-wait">下一波即将抵达</div>}
       {(state.phase === 'won' || state.phase === 'lost') && (
         <div className="result-overlay" data-testid="game-result" role="status">
           <strong>{state.phase === 'won' ? '胜利' : '失败'}</strong>
@@ -123,7 +164,8 @@ export default function App() {
       {state.phase === 'paused' && <span className="pause-overlay" data-testid="pause-message">已暂停</span>}
       <div className="control-hint">← → / A D <span>移动</span><span>空格 · 射击</span></div>
       <div className="play-actions" aria-label="引擎操作">
-        {!loadError && webgl === 'ready' && state.phase === 'ready' && <button type="button" onClick={() => send({ type: 'START' })}>开始</button>}
+        {!loadError && webgl === 'ready' && state.phase === 'ready' &&
+          <button type="button" onClick={() => send({ type: 'START' })}>开始</button>}
         {state.phase === 'running' && <button type="button" onClick={() => send({ type: 'PAUSE' })}>暂停</button>}
         {state.phase === 'paused' && <button type="button" onClick={() => send({ type: 'RESUME' })}>继续</button>}
         {(state.phase === 'ended' || state.phase === 'won' || state.phase === 'lost') &&
@@ -143,6 +185,7 @@ export default function App() {
             <div><dt>子弹</dt><dd>{state.projectiles.length}</dd></div>
             <div><dt>敌机</dt><dd>{state.enemies.length}</dd></div>
             <div><dt>敌弹</dt><dd>{state.enemyProjectiles.length}</dd></div>
+            <div><dt>待生成波次</dt><dd>{state.pendingWaves}</dd></div>
             <div><dt>结果</dt><dd>{state.outcome ?? '—'}</dd></div>
           </dl>
           {(state.phase === 'running' || state.phase === 'paused') &&

@@ -204,6 +204,10 @@ export class BattlefieldRenderer {
       if (age > 1) this.scene.remove(flash.mesh);
     }
     this.flashes = this.flashes.filter(flash => now - flash.createdAt <= 230);
+    this.host.dataset.wave = String(state.currentWave);
+    this.host.dataset.totalWaves = String(state.totalWaves);
+    this.host.dataset.pendingWaves = String(state.pendingWaves);
+    this.host.dataset.waitingForWave = String(state.waitingForWave);
     this.host.dataset.score = String(state.score);
     this.renderer.render(this.scene, this.camera);
   }
