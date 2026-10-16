@@ -160,3 +160,36 @@ h1 { margin: 0; font-size: clamp(18px, 2vw, 24px); line-height: 1.2; font-weight
   font-size: 32px; color: #d8ecf6; letter-spacing: .18em; pointer-events: none;
 }
 @media(max-width: 650px) { .score-hud { gap: 18px; } }
+
+/* 关卡选择只是一行轻量信息：不牺牲全屏战场。 */
+.level-select {
+  pointer-events: auto;
+  appearance: auto;
+  max-width: clamp(140px, 26vw, 248px);
+  border: 1px solid #365066;
+  border-radius: 5px;
+  color: #d1e2ed;
+  background: rgba(7, 19, 33, .86);
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.level-select:disabled { border-color: transparent; color: #96abb9; opacity: .75; }
+.wave-hud { font-size: 12px; color: #b2c6d2; white-space: nowrap; }
+.level-description {
+  position: absolute; z-index: 2; top: clamp(54px, 5.8vw, 73px);
+  left: clamp(16px, 3vw, 38px); right: 40px;
+  color: #7992a3; font-size: 11px; margin: 0;
+  pointer-events: none; line-height: 1.4;
+}
+.wave-wait {
+  position: absolute; z-index: 2; top: 45%; left: 50%;
+  transform: translate(-50%, -50%); white-space: nowrap;
+  letter-spacing: .1em; font-size: 16px; color: #b7cfdf;
+  pointer-events: none;
+}
+@media (max-width: 650px) {
+  .level-select { max-width: 150px; font-size: 11px; }
+  .wave-hud { font-size: 10px; }
+  .level-description { top: 95px; font-size: 10px; }
+  .score-hud { gap: 12px; }
+}

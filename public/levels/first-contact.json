@@ -3,7 +3,7 @@
   "id": "first-contact",
   "metadata": {
     "name": "第一关 · 初次接触",
-    "description": "经典敌阵横移、碰壁折返与下压；后续阶段加入射击及多波次。"
+    "description": "第一关：单波侦察机，熟悉移动、瞄准与躲避敌方射击。"
   },
   "world": {
     "width": 36,

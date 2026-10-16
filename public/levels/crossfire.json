@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "id": "crossfire",
+  "metadata": {
+    "name": "第二关 · 交叉火力",
+    "description": "双波次，袭击机高速反向突入，后续重装机持续压迫。"
+  },
+  "world": {
+    "width": 36,
+    "height": 24
+  },
+  "waves": [
+    {
+      "id": "raider-patrol",
+      "spawnAtSeconds": 0,
+      "formation": {
+        "type": "raider",
+        "rows": 2,
+        "columns": 6,
+        "startX": 8.5,
+        "startY": 20,
+        "spacingX": 3.5,
+        "spacingY": 3
+      },
+      "movement": {
+        "horizontalSpeed": 4.6,
+        "descentPerTurn": 0.85,
+        "startDirection": -1,
+        "moveEveryTicks": 2
+      },
+      "attack": {
+        "shotsPerMinute": 14,
+        "projectileSpeed": 9
+      }
+    },
+    {
+      "id": "guardian-assault",
+      "spawnAtSeconds": 12,
+      "formation": {
+        "type": "guardian",
+        "rows": 1,
+        "columns": 5,
+        "startX": 8.6,
+        "startY": 19,
+        "spacingX": 4.5,
+        "spacingY": 3
+      },
+      "movement": {
+        "horizontalSpeed": 6,
+        "descentPerTurn": 1,
+        "startDirection": 1,
+        "moveEveryTicks": 1
+      },
+      "attack": {
+        "shotsPerMinute": 26,
+        "projectileSpeed": 12
+      }
+    }
+  ],
+  "difficulty": {
+    "speedMultiplier": 1.2,
+    "fireRateMultiplier": 1.25
+  },
+  "victory": {
+    "type": "clear-all-waves"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "levels": [
+    {
+      "id": "first-contact",
+      "name": "第一关 · 初次接触",
+      "description": "第一关：单波侦察机，熟悉移动、瞄准与躲避敌方射击。"
+    },
+    {
+      "id": "crossfire",
+      "name": "第二关 · 交叉火力",
+      "description": "双波次，袭击机高速反向突入，后续重装机持续压迫。"
+    }
+  ]
+}

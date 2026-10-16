@@ -1,6 +1,6 @@
 import { DEFAULT_WORLD, validateWorld, clampCenter, type Point2, type World2 } from './world.ts';
 import { initialRandomState, nextRandomState, validateSeed } from './random.ts';
-import { firstWaveEnemies, type EnemyState, type LevelPlan, type WavePlan } from './level.ts';
+import { firstWaveEnemies, waveEnemies, type EnemyState, type LevelPlan, type WavePlan } from './level.ts';
 import { advanceFormation, type FormationDirection } from './formation.ts';
 import {
   SHOT_SPEED, SHOT_WIDTH, SHOT_HEIGHT, SHOT_COOLDOWN_TICKS, ENEMY_POINTS,
@@ -41,6 +41,9 @@ export interface GameSnapshot {
   readonly defenseLineY: number;
   readonly levelId: string | null;
   readonly pendingWaves: number;
+  readonly currentWave: number;
+  readonly totalWaves: number;
+  readonly waitingForWave: boolean;
   readonly enemies: readonly EnemyState[];
   readonly formationDirection: FormationDirection;
   readonly formationTurns: number;
@@ -60,7 +63,8 @@ export type GameEvent =
       readonly enemyId: string; readonly points: number; readonly position: Readonly<Point2> }
   | { readonly type: 'player-hit'; readonly tick: number; readonly bulletId: number;
       readonly lives: number; readonly position: Readonly<Point2> }
-  | { readonly type: 'game-finished'; readonly tick: number; readonly phase: 'won' | 'lost'; readonly outcome: GameOutcome };
+  | { readonly type: 'game-finished'; readonly tick: number; readonly phase: 'won' | 'lost'; readonly outcome: GameOutcome }
+  | { readonly type: 'wave-started'; readonly tick: number; readonly wave: number; readonly total: number; readonly waveId: string };
 
 export type CommandResult =
   | { readonly accepted: true }
@@ -83,13 +87,16 @@ export class GameEngine {
   private readonly seed: number;
   private readonly world: Readonly<World2>;
   private readonly levelId: string | null;
-  private readonly pendingWaves: number;
+  private pendingWaves: number;
+  private currentWaveIndex = 0;
+  private waveStartedAtTick = 0;
+  private readonly levelPlan: LevelPlan | undefined;
   private enemies: readonly EnemyState[];
   private readonly initialEnemies: readonly EnemyState[];
-  private readonly formationSettings: WavePlan['movement'] | null;
+  private formationSettings: WavePlan['movement'] | null;
   private readonly formationSpeedMultiplier: number;
-  private readonly enemyAttack: WavePlan['attack'] | null;
-  private readonly enemyShotInterval: number | null;
+  private enemyAttack: WavePlan['attack'] | null;
+  private enemyShotInterval: number | null;
   private nextEnemyShotTick: number | null;
   private formationDirection: FormationDirection;
   private formationTurns = 0;
@@ -119,6 +126,7 @@ export class GameEngine {
       throw new RangeError('战场太小，无法容纳玩家飞船');
     }
     this.levelId = level?.id ?? null;
+    this.levelPlan = level;
     this.pendingWaves = Math.max(0, (level?.waves.length ?? 1) - 1);
     this.initialEnemies = level ? firstWaveEnemies(level) : Object.freeze([] as EnemyState[]);
     this.enemies = this.initialEnemies;
@@ -140,6 +148,8 @@ export class GameEngine {
       elapsedSeconds: this.tick / FIXED_HZ,
       seed: this.seed, randomState: this.randomState, world: this.world,
       levelId: this.levelId, pendingWaves: this.pendingWaves,
+      currentWave: this.currentWaveIndex + 1, totalWaves: this.levelPlan?.waves.length ?? 1,
+      waitingForWave: this.enemies.length === 0 && this.pendingWaves > 0,
       enemies: this.enemies, formationDirection: this.formationDirection,
       formationTurns: this.formationTurns,
       player: Object.freeze({
@@ -184,6 +194,13 @@ export class GameEngine {
       this.randomState = initialRandomState(this.seed);
       this.playerX = this.world.width / 2;
       this.enemies = this.initialEnemies;
+      this.currentWaveIndex = 0;
+      this.waveStartedAtTick = 0;
+      this.pendingWaves = Math.max(0, (this.levelPlan?.waves.length ?? 1) - 1);
+      this.formationSettings = this.levelPlan?.waves[0].movement ?? null;
+      this.enemyAttack = this.levelPlan?.waves[0].attack ?? null;
+      const shotsPerMinute = (this.enemyAttack?.shotsPerMinute ?? 0) * (this.levelPlan?.difficulty.fireRateMultiplier ?? 1);
+      this.enemyShotInterval = shotsPerMinute > 0 ? Math.max(1, Math.round(3600 / shotsPerMinute)) : null;
       this.formationDirection = this.formationSettings?.startDirection ?? 1;
       this.formationTurns = 0;
       this.projectiles = Object.freeze([]);
@@ -209,6 +226,10 @@ export class GameEngine {
     this.firing = false;
     this.accumulator = 0;
     this.events.push({ type: 'phase-changed', from, to: this.phase, tick: this.tick });
+    if (command.type === 'START' && this.levelPlan) {
+      this.events.push({ type: 'wave-started', tick: this.tick,
+        wave: 1, total: this.levelPlan.waves.length, waveId: this.levelPlan.waves[0].id });
+    }
     return { accepted: true };
   }
 
@@ -227,7 +248,7 @@ export class GameEngine {
       }, { width: PLAYER_WIDTH, height: PLAYER_HEIGHT }).x;
       this.tick++;
       advanced++;
-      if (this.formationSettings && this.tick % this.formationSettings.moveEveryTicks === 0) {
+      if (this.formationSettings && (this.tick - this.waveStartedAtTick) % this.formationSettings.moveEveryTicks === 0) {
         const result = advanceFormation(this.enemies, this.world, this.formationSettings,
           this.formationSpeedMultiplier, this.formationDirection, this.formationSettings.moveEveryTicks);
         this.enemies = result.enemies;
@@ -236,6 +257,7 @@ export class GameEngine {
       }
       if (this.firing && this.tick >= this.nextShotTick) this.fire();
       this.updatePlayerProjectiles(previousEnemies);
+      this.scheduleNextWave();
       if (this.enemies.length === 0 && this.pendingWaves === 0 && this.initialEnemies.length > 0) {
         this.finish('won', 'cleared');
         break;
@@ -248,6 +270,34 @@ export class GameEngine {
       this.updateEnemyProjectiles(previousPlayer);
     }
     return advanced;
+  }
+
+  /**
+   * 绝对 spawnAtSeconds 为最早生成时刻；上一波必须已清空。
+   * 以 ceil(seconds * 60) 消除子 tick 不确定性，不允许跨波敌弹、缓存射弹偷袭。
+   * 在等待间隔中正常计时和响应玩家，但不提前判胜。
+   */
+  private scheduleNextWave(): void {
+    if (!this.levelPlan || this.pendingWaves === 0 || this.enemies.length > 0) return;
+    const nextIndex = this.currentWaveIndex + 1;
+    const next = this.levelPlan.waves[nextIndex];
+    if (!next || this.tick < Math.ceil(next.spawnAtSeconds * FIXED_HZ - 1e-9)) return;
+
+    this.currentWaveIndex = nextIndex;
+    this.waveStartedAtTick = this.tick;
+    this.pendingWaves = this.levelPlan.waves.length - nextIndex - 1;
+    this.enemies = waveEnemies(this.levelPlan, nextIndex);
+    this.formationSettings = next.movement;
+    this.formationDirection = next.movement.startDirection;
+    this.formationTurns = 0;
+    this.enemyAttack = next.attack;
+    const shotsPerMinute = next.attack.shotsPerMinute * this.levelPlan.difficulty.fireRateMultiplier;
+    this.enemyShotInterval = shotsPerMinute > 0 ? Math.max(1, Math.round(3600 / shotsPerMinute)) : null;
+    this.nextEnemyShotTick = this.enemyShotInterval === null ? null : this.tick + this.enemyShotInterval;
+    this.projectiles = Object.freeze([]);
+    this.enemyProjectiles = Object.freeze([]);
+    this.events.push({ type: 'wave-started', tick: this.tick, wave: nextIndex + 1,
+      total: this.levelPlan.waves.length, waveId: next.id });
   }
 
   private fire(): void {

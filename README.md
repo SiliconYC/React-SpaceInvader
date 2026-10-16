@@ -2,7 +2,7 @@
 
 基于 **React + TypeScript + Three.js + Vite** 的浏览器游戏：用立体模型呈现经典二维《太空侵略者》，而不引入三维飞行操作。
 
-> **当前状态：** Issue #3–#8 已实现首关一波的完整游戏闭环：敌阵进攻/发射、玩家移动/开火、计分与生命、暂停、胜败及重新开始。多波次、双关卡及切换留给 Issue #9。见 [P1 路线图](docs/ROADMAP.md)。
+> **当前状态：** P1 Issue #3–#9 已实现完整的双关卡可玩闭环：JSON 关卡选择、多波次进攻、玩家射击/躲避、计分生命、暂停、胜负和重新开始。见 [P1 路线图](docs/ROADMAP.md)。
 
 ## 核心设计（2.5D）
 
@@ -19,13 +19,19 @@
 
 ## 关卡数据（v1）
 
-示例：`public/levels/first-contact.json`。只需改 JSON 中 `waves[0].formation` 的行列、起点或间距，重建部署即可改变敌阵，无需修改 TypeScript。严格验证字段：`schemaVersion=1`、`id`、`metadata`、`world`、`waves`、`difficulty`、`victory`。每波包含 `spawnAtSeconds`、`formation`（type、rows、columns、startX、startY、spacingX、spacingY）、`movement` 与 `attack`；所有数字须为有限且合法范围，禁止越界或未知敌机类型。**#6 首波敌阵已按 JSON 的 `movement.horizontalSpeed`（世界单位/秒）、`descentPerTurn`（世界单位/次）、`startDirection`（-1/1）、`moveEveryTicks`（60Hz 时钟的整数间隔）及 `difficulty.speedMultiplier` 运动。** #7 已增加玩家射击；#8 已增加敌方发射、玩家三格生命、碰撞与终局判定；#9 才处理多波次。 若配置无效，界面直接显示中文报错，绝不静默回退硬编码阵型。
+示例：`public/levels/first-contact.json`（初次接触，一波侦察敌阵）和 `public/levels/crossfire.json`（交叉火力，两波袭击/重装敌阵）。选择列表由 `public/levels/index.json` 严格读取（关卡 ID、名称、简介）。只需改 JSON 中 `waves[0].formation` 的行列、起点或间距，重建部署即可改变敌阵，无需修改 TypeScript。严格验证字段：`schemaVersion=1`、`id`、`metadata`、`world`、`waves`、`difficulty`、`victory`。每波包含 `spawnAtSeconds`、`formation`（type、rows、columns、startX、startY、spacingX、spacingY）、`movement` 与 `attack`；所有数字须为有限且合法范围，禁止越界或未知敌机类型。**#6 首波敌阵已按 JSON 的 `movement.horizontalSpeed`（世界单位/秒）、`descentPerTurn`（世界单位/次）、`startDirection`（-1/1）、`moveEveryTicks`（60Hz 时钟的整数间隔）及 `difficulty.speedMultiplier` 运动。** #7 已增加玩家射击；#8 已增加敌方发射、玩家三格生命、碰撞与终局判定；#9 已实现清空当前波、等待 `spawnAtSeconds` 最早绝对生成时刻、按 JSON 切换各波运动与攻击参数；清空最终波才判胜。若配置无效，界面直接显示中文报错，绝不静默回退硬编码阵型。
 
 ## 胜负与攻击规则（#8）
 
 - 敌机按当前波次 JSON 的 `attack.shotsPerMinute`、`attack.projectileSpeed` 和 `difficulty.fireRateMultiplier` 定时射击，只从各列最底部存活敌机中以种子确定的随机数挑选发射者；`shotsPerMinute=0` 表示禁用。所有敌弹沿相同二维坐标平面向下飞行，扫描式 AABB 判定相对移动的玩家碰撞。
 - 玩家初始 3 条生命，每次中弹扣 1 条、随后 60 个逻辑 tick 保护，命中弹立即消失；生命耗尽或敌机抵达防线则失败。清空敌人且没有等待波次则胜利，终局冻结行动和子弹，可点击「重新开始」重置计时、随机状态和分数。
-- 本阶段只执行第一波。若 JSON 配置了后续波次，第一波清空后**不会提前宣布胜利**；下一波生成/通关留给 #9。页面采用无大面板的极简 HUD（分数、生命和结算文字）。
+- **多波次已实现**：必须清空上一波、且达到下一波 `spawnAtSeconds` 秒数（60Hz 固定时间步）才会生成下一波；清空最终波后胜利。跨波重新载入运动方向、敌机类型/数量、射击频率、弹速和难度乘数；保留玩家生命与累积分数。波间等待、暂停和重新开始均正常工作。页面采用极简 HUD（分数、波次、生命和结算文字）。
+
+## 选择与扩展关卡
+
+进入 Pages，左上角可在开局、重置后或结算后选择「第一关 · 初次接触」及「第二关 · 交叉火力」。战斗中和暂停时不能中途切换。关卡切换会读取并完整验证目标文件，校验失败时明确报错，旧关卡状态不会被静默破坏。要增加关卡：新增同源 `public/levels/<id>.json`，并在 `public/levels/index.json` 增加对应 ID、名称和简介；关卡文件内部 id 必须与文件名相同，元数据应与清单相符。
+
+**数据契约版本策略：** 当前只接受严格 `schemaVersion: 1`；未来新版本必须增加显式解析/迁移器和回归测试，不可静默补充未知字段。关卡必须有 1～16 波、严格递增且第一波从 0 秒开始，每波位置/数量/类型/攻击与运动须合法，累计敌机不超过 256；非法引用、路径遍历、重复 ID、错误范围、无法兼容的版本均拒绝。清单要求 2～16 个不重复关卡。
 
 ## 运行与部署
 

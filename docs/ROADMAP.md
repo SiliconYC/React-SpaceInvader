@@ -9,7 +9,7 @@
 - 关卡由独立、版本化、经严格校验的 JSON 数据驱动。P1 至少两份可玩关卡、多波次。
 - 每次独立交付合并 `dev`，均应能通过 <https://siliconyc.github.io/React-SpaceInvader/> 看到与验证可运行增量。
 
-## 已建立的 7 个 Issue（#3～#8 已交付，其余待实施）
+## 已建立的 7 个 Issue（#3～#9 已交付，P1 完成）
 
 | 顺序 | Issue | 独立用户可见验收 |
 | --- | --- | --- |
@@ -19,7 +19,7 @@
 | 4 | [#6 敌机折返与下降](https://github.com/SiliconYC/React-SpaceInvader/issues/6) | 编队横移、碰壁、下降均可见（已交付） |
 | 5 | [#7 玩家射击、碰撞与计分](https://github.com/SiliconYC/React-SpaceInvader/issues/7) | 可实际击落敌人并累计积分（已交付） |
 | 6 | [#8 敌机射击、生命与胜负](https://github.com/SiliconYC/React-SpaceInvader/issues/8) | 能完成首关一波、胜败、重新开始（已交付） |
-| 7 | [#9 多波次、双关卡与端到端验收](https://github.com/SiliconYC/React-SpaceInvader/issues/9) | 两种数据配置关卡可完整游玩 |
+| 7 | [#9 多波次、双关卡与端到端验收](https://github.com/SiliconYC/React-SpaceInvader/issues/9) | 两种数据配置关卡可完整游玩（已交付） |
 
 ## 开发顺序及边界
 
@@ -32,3 +32,7 @@
 ## P2 候选（暂不立 Issue）
 
 可在 P1 验收后挑选：原创模型与音画精修、不同敌机技能与首领、触控输入、关卡图形化编辑器、本机存档和 PWA 离线。反对先实现复杂大型框架而延误完整游戏闭环。
+
+## P1 收尾验收（#9）
+
+两关由 `public/levels/index.json` 登记、按严格 `schemaVersion:1` 验证加载。通过改 JSON 控制编队、速度、各波开火时机和难度，不新增规则代码。完整浏览器测试应包括：选择两关、不同关卡画面、首波清空、下一波时序生成、分数/生命保留、暂停/继续、终局、重试/换关、非法数据的失败恢复，随后 `dev` Pages **线上 Chromium** 与部署版本核验。验收详情以关联 PR 和 Actions 记录为准。
