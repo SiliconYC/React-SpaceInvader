@@ -26,7 +26,7 @@ test('纯二维扫掠 AABB 命中高速弹道及移动目标，擦边外不命�
 });
 
 test('发射命令合法校验、冷却、暂停/重置后不再自动射击', () => {
-  const level = stage();
+  const level = stage({ x: 10 });
   const game = new GameEngine(2, level.world, level);
   const ready = game.snapshot();
   assert.equal(game.dispatch({ type: 'FIRE' }).accepted, false);
