@@ -12,7 +12,7 @@
     "test:browser": "playwright test",
     "measure:difficulty": "node --experimental-strip-types scripts/measure-difficulty.mjs",
     "smoke": "node scripts/check-dist.mjs",
-    "verify": "npm run test:core && npm run typecheck && npm run build && npm run smoke"
+    "verify": "npm run test:core && npm run typecheck && npm run build && npm run smoke && npm run measure:difficulty"
   },
   "dependencies": {
     "react": "18.3.1",
