@@ -33,7 +33,7 @@ export default function App() {
   const getAudio = () => audioRef.current ?? (audioRef.current = new GameAudio(audioPrefs));
   const changeAudio = (next: AudioPrefs) => { setAudioPrefs(next); getAudio().setPrefs(next); };
 
-  const [webgl, setWebgl] = useState<'ready' | 'error' | 'loading'>('loading');
+  const [webgl, setWebgl] = useState<'ready' | 'error' | 'loading' | 'lost'>('loading');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [levelName, setLevelName] = useState('关卡加载中');
   const [catalog, setCatalog] = useState<LevelCatalog | null>(null);
@@ -72,7 +72,13 @@ export default function App() {
       setScoresOpen(false);
       audioRef.current?.reset();
       audioRef.current?.setPhase('ready');
-      const scene = new BattlefieldRenderer(host, engine.snapshot());
+      let lastTime: number | null = null;
+      const scene = new BattlefieldRenderer(host, engine.snapshot(),lost=>{
+        setWebgl(lost?'lost':'ready');
+        lastTime=null;
+        if(lost){touchRef.current?.releaseAll();audioRef.current?.setVisible(false);}
+        else audioRef.current?.setVisible(!document.hidden);
+      });
       scene.setDebugVisible(new URLSearchParams(window.location.search).has('debug'));
       const keyboard = new KeyboardController(command => { engine.dispatch(command); });
       const touch = new TouchControls(command=>{engine.dispatch(command);});
@@ -82,17 +88,17 @@ export default function App() {
       keyboardRef.current = keyboard;
 
       let raf = 0;
-      let lastTime: number | null = null;
       let lastUi = 0;
       const onVisibility = () => { lastTime = null; if(document.hidden)touch.releaseAll(); audioRef.current?.setVisible(!document.hidden); };
       const onBlur=()=>touch.releaseAll();
       window.addEventListener('blur',onBlur);
       document.addEventListener('visibilitychange', onVisibility);
       const animate = (time: number) => {
-        if (lastTime !== null) engine.advanceFrame(Math.min((time - lastTime) / 1000, 0.25));
-        lastTime = time;
-        keyboard.setEnabled(engine.snapshot().phase === 'running');
-        touch.setEnabled(engine.snapshot().phase === 'running');
+        const canRun=!document.hidden && !scene.isContextLost;
+        if(canRun && lastTime!==null)engine.advanceFrame(Math.min((time-lastTime)/1000,.25));
+        lastTime=canRun?time:null;
+        keyboard.setEnabled(canRun&&engine.snapshot().phase==='running');
+        touch.setEnabled(canRun&&engine.snapshot().phase==='running');
         host.dataset.touchHeld=String(touch.activeCount);
         const snapshot = engine.snapshot();
         const events = engine.drainEvents();
@@ -304,8 +310,8 @@ export default function App() {
         </aside>
       )}
 
-      <span data-testid="webgl-status" className={webgl === 'error' ? 'render-error' : 'sr-only'} role="status">
-        {webgl === 'ready' ? 'WebGL 正常' : webgl === 'error' ? 'WebGL 初始化失败' : '正在初始化 WebGL'}
+      <span data-testid="webgl-status" className={webgl === 'error' || webgl === 'lost' ? 'render-error' : 'sr-only'} role="status">
+        {webgl === 'ready' ? 'WebGL 正常' : webgl === 'lost' ? 'WebGL 已断开，等待恢复' : webgl === 'error' ? 'WebGL 初始化失败' : '正在初始化 WebGL'}
       </span>
     </main>
   );

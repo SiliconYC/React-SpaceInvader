@@ -27,11 +27,27 @@ export class BattlefieldRenderer {
   private readonly bulletMaterial: THREE.MeshStandardMaterial;
   private readonly effects: CombatFX;
   private readonly observer: ResizeObserver;
+  private contextLost=false;
+  private readonly lostHandler=(event:Event)=>{
+    event.preventDefault();this.contextLost=true;
+    this.host.dataset.webglContext='lost';this.onContext?.(true);
+  };
+  private readonly restoreHandler=()=>{
+    this.contextLost=false;this.host.dataset.webglContext='ready';
+    this.resize();this.onContext?.(false);
+  };
+  get isContextLost():boolean{return this.contextLost;}
 
-  constructor(private readonly host: HTMLDivElement, snapshot: GameSnapshot) {
+  constructor(private readonly host: HTMLDivElement, snapshot: GameSnapshot,
+    private readonly onContext?: (lost:boolean)=>void) {
     this.world = snapshot.world;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const coarse=window.matchMedia?.('(pointer:coarse)').matches ?? false;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
+    host.dataset.pixelRatio=this.renderer.getPixelRatio().toFixed(2);
+    host.dataset.webglContext='ready';
+    this.renderer.domElement.addEventListener('webglcontextlost',this.lostHandler);
+    this.renderer.domElement.addEventListener('webglcontextrestored',this.restoreHandler);
     this.renderer.setClearColor(0x050913, 1);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -156,7 +172,11 @@ export class BattlefieldRenderer {
     const width = Math.max(this.host.clientWidth, 1);
     const height = Math.max(this.host.clientHeight, 1);
     const aspect = width / height;
-    const viewHeight = Math.max(this.world.height + 2.2, (this.world.width + 2.2) / aspect);
+    const coarse=window.matchMedia?.('(pointer:coarse)').matches ?? false;
+    const viewHeight = Math.max(this.world.height + (coarse ? 7 : 2.2), (this.world.width + 2.2) / aspect);
+    const centerY = coarse ? -2.2 : 0;
+    this.camera.position.set(0,centerY,50);
+    this.camera.lookAt(0,centerY,0);
     const viewWidth = viewHeight * aspect;
     this.camera.left = -viewWidth / 2;
     this.camera.right = viewWidth / 2;
@@ -165,12 +185,13 @@ export class BattlefieldRenderer {
     this.camera.near = 0.1;
     this.camera.far = 100;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height, false);
+    if(!this.contextLost)this.renderer.setSize(width, height, false);
     this.host.dataset.cameraSpanX = viewWidth.toFixed(3);
     this.host.dataset.cameraSpanY = viewHeight.toFixed(3);
   }
 
   render(state: GameSnapshot): void {
+    if(this.contextLost)return;
     if (state.world.width !== this.world.width || state.world.height !== this.world.height) {
       throw new Error('渲染器不能修改二维世界的规则尺寸');
     }
@@ -197,6 +218,9 @@ export class BattlefieldRenderer {
     this.host.dataset.waitingForWave = String(state.waitingForWave);
     this.host.dataset.score = String(state.score);
     this.renderer.render(this.scene, this.camera);
+    this.host.dataset.drawCalls=String(this.renderer.info.render.calls);
+    this.host.dataset.gpuGeometries=String(this.renderer.info.memory.geometries);
+    this.host.dataset.gpuTextures=String(this.renderer.info.memory.textures);
   }
 
   /** All feedback is initiated only by unique authoritative GameEvent records. */
@@ -285,6 +309,8 @@ export class BattlefieldRenderer {
 
   dispose(): void {
     this.observer.disconnect();
+    this.renderer.domElement.removeEventListener('webglcontextlost',this.lostHandler);
+    this.renderer.domElement.removeEventListener('webglcontextrestored',this.restoreHandler);
     for (const mesh of this.enemyMeshes.values()) this.scene.remove(mesh);
     this.enemyMeshes.clear();
     this.projectileMeshes.clear();
