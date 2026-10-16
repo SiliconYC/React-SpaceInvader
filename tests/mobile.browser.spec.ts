@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { writeFileSync } from 'node:fs';
 
 test.describe('模拟真实移动设备触控',()=>{
   test.use({viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:3});
@@ -117,7 +118,7 @@ test('重复切关与重置，低开销 WebGL 对象有界；记录实际软件 
   });
   console.log('Chromium SwiftShader measured baseline:',JSON.stringify({runs:records,fps}));
   expect(fps.fps).toBeGreaterThan(1); // no fabricated hardware/FPS guarantee
-  await info.attach('mobile-gpu-performance.json',{body:JSON.stringify({runs:records,fps},null,2),contentType:'application/json'});
+  writeFileSync(info.outputPath('mobile-gpu-performance.json'),JSON.stringify({runs:records,fps},null,2));
   await expect(stage).toHaveAttribute('data-world-width','36');
 });
 

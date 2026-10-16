@@ -79,5 +79,7 @@ jobs:
             test-results/**/raider-models.png
             test-results/**/guardian-models.png
             test-results/**/guardian-narrow-models.png
+            test-results/**/touch-*.png
+            test-results/**/mobile-gpu-performance.json
           retention-days: 7
           if-no-files-found: ignore
