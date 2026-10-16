@@ -116,3 +116,11 @@ h1 { margin: 0; font-size: clamp(18px, 2vw, 24px); line-height: 1.2; font-weight
   .preview-label { font-size: 10px; }
   .debug-panel { top: 63px; }
 }
+
+.control-hint {
+  position: absolute; z-index: 2; bottom: clamp(69px, 11vh, 92px);
+  left: 50%; transform: translateX(-50%); white-space: nowrap;
+  font-size: 12px; letter-spacing: .08em; color: #7197a7;
+  pointer-events: none;
+}
+.control-hint span { margin-left: 7px; color: #596e80; }

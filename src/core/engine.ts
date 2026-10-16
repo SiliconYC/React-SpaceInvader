@@ -1,4 +1,10 @@
-import { DEFAULT_WORLD, validateWorld, type World2 } from './world.ts';
+import { DEFAULT_WORLD, validateWorld, clampCenter, type Point2, type World2 } from './world.ts';
+
+/** 仅使用二维逻辑位置；显示用的 z 不在状态中。 */
+export interface PlayerState { readonly position: Readonly<Point2>; readonly width: number; readonly height: number }
+export const PLAYER_WIDTH = 2.5;
+export const PLAYER_HEIGHT = 1.4;
+export const PLAYER_SPEED = 12; // 每秒世界逻辑单位
 import { initialRandomState, nextRandomState, validateSeed } from './random.ts';
 
 export const FIXED_HZ = 60;
@@ -9,7 +15,8 @@ export type GameCommand =
   | { readonly type: 'PAUSE' }
   | { readonly type: 'RESUME' }
   | { readonly type: 'END' }
-  | { readonly type: 'RESET' };
+  | { readonly type: 'RESET' }
+  | { readonly type: 'SET_MOVEMENT'; readonly direction: -1 | 0 | 1 };
 export interface GameSnapshot {
   readonly phase: GamePhase;
   readonly tick: number;
@@ -17,13 +24,14 @@ export interface GameSnapshot {
   readonly seed: number;
   readonly randomState: number;
   readonly world: Readonly<World2>;
+  readonly player: Readonly<PlayerState>;
 }
 export type GameEvent =
   | { readonly type: 'phase-changed'; readonly from: GamePhase; readonly to: GamePhase; readonly tick: number }
   | { readonly type: 'game-reset'; readonly tick: 0 };
 export type CommandResult = { readonly accepted: true } | { readonly accepted: false; readonly reason: string };
 
-const TRANSITIONS: Readonly<Record<Exclude<GameCommand['type'], 'RESET'>, readonly [GamePhase, GamePhase][]>> = {
+const TRANSITIONS: Readonly<Record<Exclude<GameCommand['type'], 'RESET' | 'SET_MOVEMENT'>, readonly [GamePhase, GamePhase][]>> = {
   START: [['ready', 'running']],
   PAUSE: [['running', 'paused']],
   RESUME: [['paused', 'running']],
@@ -38,26 +46,47 @@ export class GameEngine {
   private readonly seed: number;
   private readonly world: Readonly<World2>;
   private events: GameEvent[] = [];
+  private movement: -1 | 0 | 1 = 0;
+  private playerX: number;
+  private readonly playerY: number;
 
   constructor(seed = 1, world: World2 = DEFAULT_WORLD) {
     this.seed = validateSeed(seed);
     this.randomState = initialRandomState(this.seed);
     this.world = validateWorld(world);
+    if (this.world.width < PLAYER_WIDTH || this.world.height < PLAYER_HEIGHT + 2) {
+      throw new RangeError('战场太小，无法容纳玩家飞船');
+    }
+    this.playerX = this.world.width / 2;
+    this.playerY = PLAYER_HEIGHT / 2 + 1.5;
   }
 
   snapshot(): GameSnapshot {
     return Object.freeze({
       phase: this.phase, tick: this.tick, elapsedSeconds: this.tick / FIXED_HZ,
       seed: this.seed, randomState: this.randomState, world: this.world,
+      player: Object.freeze({
+        position: Object.freeze({ x: this.playerX, y: this.playerY }),
+        width: PLAYER_WIDTH, height: PLAYER_HEIGHT,
+      }),
     });
   }
 
   dispatch(command: GameCommand): CommandResult {
+    if (command.type === 'SET_MOVEMENT') {
+      if (this.phase !== 'running' || ![-1, 0, 1].includes(command.direction)) {
+        return { accepted: false, reason: '仅运行中允许合法左右移动命令' };
+      }
+      this.movement = command.direction;
+      return { accepted: true };
+    }
     if (command.type === 'RESET') {
       this.phase = 'ready';
       this.tick = 0;
       this.accumulator = 0;
       this.randomState = initialRandomState(this.seed);
+      this.playerX = this.world.width / 2;
+      this.movement = 0;
       this.events.push({ type: 'game-reset', tick: 0 });
       return { accepted: true };
     }
@@ -65,6 +94,8 @@ export class GameEngine {
     if (!target) return { accepted: false, reason: '当前阶段不允许执行 ' + command.type };
     const from = this.phase;
     this.phase = target[1];
+    // 失焦/暂停/重新开始后不得残留按键方向。
+    this.movement = 0;
     // 暂停/继续/重新开始时，不把渲染空档算成游戏时间。
     this.accumulator = 0;
     this.events.push({ type: 'phase-changed', from, to: this.phase, tick: this.tick });
@@ -77,7 +108,13 @@ export class GameEngine {
       throw new RangeError('逻辑步进数量无效');
     }
     if (this.phase !== 'running') return 0;
-    for (let step = 0; step < count; step++) this.tick += 1;
+    for (let step = 0; step < count; step++) {
+      this.playerX = clampCenter(this.world, {
+        x: this.playerX + this.movement * PLAYER_SPEED * FIXED_DELTA_SECONDS,
+        y: this.playerY,
+      }, { width: PLAYER_WIDTH, height: PLAYER_HEIGHT }).x;
+      this.tick += 1;
+    }
     return count;
   }
 

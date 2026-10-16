@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameEngine, type GameCommand, type GameSnapshot } from './core/engine.ts';
 import { BattlefieldRenderer } from './render/BattlefieldRenderer.ts';
+import { KeyboardController } from './input/KeyboardController.ts';
 
 const GAME_SEED = 20261017;
 const LABELS: Record<GameSnapshot['phase'], string> = {
@@ -11,6 +12,7 @@ export default function App() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const rendererRef = useRef<BattlefieldRenderer | null>(null);
+  const keyboardRef = useRef<KeyboardController | null>(null);
   const [webgl, setWebgl] = useState<'ready' | 'error' | 'loading'>('loading');
   const [debug, setDebug] = useState(() => new URLSearchParams(window.location.search).has('debug'));
   const [state, setState] = useState<GameSnapshot>(() => new GameEngine(GAME_SEED).snapshot());
@@ -32,12 +34,15 @@ export default function App() {
     rendererRef.current = scene;
     scene.setDebugVisible(new URLSearchParams(window.location.search).has('debug'));
     setWebgl('ready');
+    const keyboard = new KeyboardController(command => { engine.dispatch(command); });
+    keyboardRef.current = keyboard;
     let raf = 0;
     let lastTime: number | null = null;
     let lastUi = 0;
     const animate = (time: number) => {
       if (lastTime !== null) engine.advanceFrame(Math.min((time - lastTime) / 1000, 0.25));
       lastTime = time;
+      keyboard.setEnabled(engine.snapshot().phase === 'running');
       scene.render(engine.snapshot());
       if (time - lastUi > 120) {
         setState(engine.snapshot());
@@ -53,6 +58,8 @@ export default function App() {
       document.removeEventListener('visibilitychange', onVisibility);
       engineRef.current = null;
       rendererRef.current = null;
+      keyboard.dispose();
+      keyboardRef.current = null;
       scene.dispose();
     };
   }, []);
@@ -65,7 +72,10 @@ export default function App() {
     const engine = engineRef.current;
     if (!engine) return;
     const result = engine.dispatch(command);
-    if (result.accepted) setState(engine.snapshot());
+    if (result.accepted) {
+      keyboardRef.current?.setEnabled(engine.snapshot().phase === 'running');
+      setState(engine.snapshot());
+    }
   };
 
   return (
@@ -82,6 +92,7 @@ export default function App() {
           onClick={() => setDebug(value => !value)}>{debug ? '关闭调试' : '调试'}</button>
       </header>
 
+      <div className="control-hint">← → / A D <span>左右移动</span></div>
       <div className="play-actions" aria-label="引擎操作">
         {state.phase === 'ready' && <button type="button" onClick={() => send({ type: 'START' })}>开始</button>}
         {state.phase === 'running' && <button type="button" onClick={() => send({ type: 'PAUSE' })}>暂停</button>}
