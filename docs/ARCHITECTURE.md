@@ -98,3 +98,7 @@ Web Audio `src/audio/GameAudio.ts` 实时合成七种短促原创波形音效（
 `src/input/TouchControls.ts` 用 pointerId 同时跟踪左右移动和射击，两方向抵消，同样只调用 `SET_MOVEMENT/SET_FIRING`；取消/离开捕获、页面失焦、后台、暂停、卸载均释放按键。触屏操作浮在画面底部，安全区内；桌面键盘不变。透视规则仍正交镜头、仅按显示视口调整裁切范围：触屏底部预留少量视觉空间，二维位置、玩家瞄准及物理世界完全不变。
 
 低端移动设备通过 `matchMedia('(pointer:coarse)')` 将 WebGL 分辨率倍率由原上限 2 限制为 1.5；其他设备保留 2。每帧只读取 `renderer.info` 已有 draw calls、GPU geometry/texture 数量，浏览器性能测试记录实际软件 Chromium SwiftShader 的帧间隔，验收上限约束活动绘制、几何与粒子数，`docs/P2_BASELINE.md` 已识别的独立敌机网格分配由 #21 修复，#22 限制最多 72 粒子。数据仅来自 CI 实际记录，非真实手机硬件 GPU 跑分。WebGL 上下文丢失时停运游戏时钟、不渲染并显示等待恢复提示；还原后复用一个 RAF 和 WebGL 会话，避免隐藏时间补帧；原生失焦和触控释放同样生效。测试包括 Chromium 移动设备触控模拟、横竖屏截图、多指按住/松开、连续切关内存增长上界、帧率统计以及支持时的真实上下文丢失/恢复。真人手机兼容性及人体工学体验仍需设备手测。
+
+### #26 实测后的绘制调用优化
+
+首轮 GitHub CI [38951320989](https://github.com/SiliconYC/React-SpaceInvader/actions/runs/38951320989) 在 Chromium SwiftShader 软件渲染器中采样：首次侦察编队 24 敌机约 **95 次 Draw Calls**、12 敌机袭击阵约 **71 次**，无纹理缓存，连续 1.18 秒实测 **5.9 FPS**（8 个画面帧）。这些数值属于 CI 软件渲染器，绝非实体手机 GPU 跑分。识别瓶颈后，`BattlefieldRenderer` 将同型号几何零件替换为各型号单独 `InstancedMesh`，不改变网格外观与碰撞语义；同型号的多个敌机零件合批处理，每帧只写入实例矩阵，并限制同时最多 256 个原型容量（JSON 已限制上限）。WebGL 会话退出时调用 `InstancedMesh.dispose()` 释放每型实例缓冲，原几何和材质仍统一销毁。新版本应通过性能浏览器实测验证 Draw Calls 下降到 50 以下；实际复测 FPS 以新 PR/Pages 工作流数据为准，不预先宣称加速倍数。
