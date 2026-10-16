@@ -44,6 +44,7 @@ test('浏览器完整多波战斗：人工射击清场、等待调度、第二�
       wave.formation.startX = 18;
       wave.formation.startY = 10;
       wave.movement.horizontalSpeed = 0;
+      if (index === 1) wave.behavior.armorHits = 1; // 此用例只测跨波调度，装甲独立测
       wave.attack.shotsPerMinute = 0;
     }
     level.waves[1].spawnAtSeconds = 2;
