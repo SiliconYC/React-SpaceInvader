@@ -21,7 +21,7 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run verify
       - name: 记录产物对应的 Git 提交
-        run: printf '%s\\n' "$GITHUB_SHA" > dist/build-sha.txt
+        run: echo "$GITHUB_SHA" > dist/build-sha.txt
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
@@ -48,7 +48,7 @@ jobs:
           [[ "$live_sha" == "$GITHUB_SHA" ]] || { echo "::error::线上未更新到当前提交"; exit 1; }
           curl --fail --silent --show-error --location "$base/" -o /tmp/invader-index.html
           grep -q '/React-SpaceInvader/assets/' /tmp/invader-index.html
-          js_asset=$(grep -oE '/React-SpaceInvader/assets/[^"]+\\.js' /tmp/invader-index.html | head -n1)
+          js_asset=$(grep -oE '/React-SpaceInvader/assets/[^"]+[.]js' /tmp/invader-index.html | head -n1)
           [[ -n "$js_asset" ]]
           curl --fail --silent --show-error --location "https://siliconyc.github.io$js_asset" -o /tmp/invader-app.js
           test -s /tmp/invader-app.js
