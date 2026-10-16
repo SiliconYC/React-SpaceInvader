@@ -1,4 +1,31 @@
-import { test,expect } from '@playwright/test';
+import { test,expect,type Page } from '@playwright/test';
+
+/** Browser keyboard event with immediate key release on the *first rendered shot*.
+ *  Avoids inadvertently holding Space for 200+ ms on loaded Chromium/SwiftShader.
+ *  Still uses the real keyboard input adapter, not direct GameEngine manipulation.
+ */
+async function singlePhysicalShot(page:Page):Promise<void>{
+  await page.evaluate(async()=>{
+    const field=document.querySelector<HTMLElement>('[data-testid="battlefield"]');
+    if(!field)throw new Error('战场不存在');
+    const initial=Number(field.dataset.fxEmitted??0);
+    await new Promise<void>((resolve,reject)=>{
+      let finished=false;
+      const release=()=>{
+        window.dispatchEvent(new KeyboardEvent('keyup',{key:' ',code:'Space',bubbles:true}));
+      };
+      const observer=new MutationObserver(()=>{
+        if(!finished&&Number(field.dataset.fxEmitted??0)>initial){
+          finished=true;observer.disconnect();release();resolve();
+        }
+      });
+      observer.observe(field,{attributes:true,attributeFilter:['data-fx-emitted']});
+      window.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true,cancelable:true}));
+      setTimeout(()=>{if(!finished){finished=true;observer.disconnect();release();reject(new Error('发射超时'));}},1500);
+    });
+  });
+}
+
 
 test('守卫机两次命中、闪光与得分完全由 JSON 装甲驱动',async ({page},info)=>{
   await page.route('**/levels/crossfire.json',async route=>{
@@ -18,16 +45,12 @@ test('守卫机两次命中、闪光与得分完全由 JSON 装甲驱动',async 
   await expect(stage).toHaveAttribute('data-enemy-hp','2');
   await expect(stage).toHaveAttribute('data-enemy-kinds','guardian');
   await page.getByRole('button',{name:'开始',exact:true}).click();
-  await page.keyboard.down('Space');
-  await expect.poll(async()=>Number(await stage.getAttribute('data-bullet-count'))).toBeGreaterThan(0);
-  await page.keyboard.up('Space');
+  await singlePhysicalShot(page);
   await expect(stage).toHaveAttribute('data-enemy-hp','1',{timeout:6000});
   await expect(page.getByTestId('score')).toContainText('0');
   await expect(stage).toHaveAttribute('data-fx-kind','armor');
   await page.screenshot({path:info.outputPath('guardian-armor.png'),fullPage:true});
-  await page.keyboard.down('Space');
-  await expect.poll(async()=>Number(await stage.getAttribute('data-bullet-count'))).toBeGreaterThan(0);
-  await page.keyboard.up('Space');
+  await singlePhysicalShot(page);
   await expect(stage).toHaveAttribute('data-game-phase','won',{timeout:7000});
   await expect(page.getByTestId('score')).toContainText('30');
 });
