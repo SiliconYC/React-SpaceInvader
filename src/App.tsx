@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GameEngine, type GameCommand, type GameSnapshot } from './core/engine.ts';
 import { BattlefieldRenderer } from './render/BattlefieldRenderer.ts';
 import { KeyboardController } from './input/KeyboardController.ts';
+import { GameAudio, readAudioPrefs, type AudioPrefs } from './audio/GameAudio.ts';
 import { loadLevel } from './levels/load.ts';
 import { loadLevelCatalog, type LevelCatalog } from './levels/catalog.ts';
 
@@ -19,6 +20,11 @@ export default function App() {
   const rendererRef = useRef<BattlefieldRenderer | null>(null);
   const keyboardRef = useRef<KeyboardController | null>(null);
   const sessionRef = useRef<Session | null>(null);
+  const audioRef = useRef<GameAudio | null>(null);
+  const [audioPrefs,setAudioPrefs] = useState<AudioPrefs>(() => readAudioPrefs());
+  const [audioOpen,setAudioOpen] = useState(false);
+  const getAudio = () => audioRef.current ?? (audioRef.current = new GameAudio(audioPrefs));
+  const changeAudio = (next: AudioPrefs) => { setAudioPrefs(next); getAudio().setPrefs(next); };
 
   const [webgl, setWebgl] = useState<'ready' | 'error' | 'loading'>('loading');
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -54,6 +60,8 @@ export default function App() {
       if (abort.signal.aborted) return;
       const engine = new GameEngine(GAME_SEED, level.world, level);
       sessionRef.current?.stop();
+      audioRef.current?.reset();
+      audioRef.current?.setPhase('ready');
       const scene = new BattlefieldRenderer(host, engine.snapshot());
       scene.setDebugVisible(new URLSearchParams(window.location.search).has('debug'));
       const keyboard = new KeyboardController(command => { engine.dispatch(command); });
@@ -64,13 +72,17 @@ export default function App() {
       let raf = 0;
       let lastTime: number | null = null;
       let lastUi = 0;
-      const onVisibility = () => { lastTime = null; };
+      const onVisibility = () => { lastTime = null; audioRef.current?.setVisible(!document.hidden); };
       document.addEventListener('visibilitychange', onVisibility);
       const animate = (time: number) => {
         if (lastTime !== null) engine.advanceFrame(Math.min((time - lastTime) / 1000, 0.25));
         lastTime = time;
         keyboard.setEnabled(engine.snapshot().phase === 'running');
-        scene.consumeEvents(engine.drainEvents(),engine.snapshot());
+        const snapshot = engine.snapshot();
+        const events = engine.drainEvents();
+        audioRef.current?.setPhase(snapshot.phase);
+        audioRef.current?.onEvents(events);
+        scene.consumeEvents(events,snapshot);
         scene.render(engine.snapshot());
         if (time - lastUi >= 120) {
           setState(engine.snapshot());
@@ -104,6 +116,8 @@ export default function App() {
   useEffect(() => () => {
     sessionRef.current?.stop();
     sessionRef.current = null;
+    audioRef.current?.dispose();
+    audioRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -113,8 +127,11 @@ export default function App() {
   const send = (command: GameCommand) => {
     const engine = engineRef.current;
     if (!engine) return;
+    if (command.type === 'START' || command.type === 'RESUME') getAudio().unlock();
     const result = engine.dispatch(command);
     if (result.accepted) {
+      if (command.type === 'RESET') audioRef.current?.reset();
+      audioRef.current?.setPhase(engine.snapshot().phase);
       keyboardRef.current?.setEnabled(engine.snapshot().phase === 'running');
       setState(engine.snapshot());
     }
@@ -137,9 +154,22 @@ export default function App() {
           )}
           <span className="sr-only" data-testid="level-name">{levelName}</span>
         </div>
-        <button className="debug-toggle" type="button" aria-pressed={debug}
+        <div className="header-tools">
+          <button type="button" className="debug-toggle" aria-expanded={audioOpen}
+            aria-controls="audio-settings" onClick={() => setAudioOpen(v => !v)}>音频</button>
+          <button className="debug-toggle" type="button" aria-pressed={debug}
           onClick={() => setDebug(value => !value)}>{debug ? '关闭调试' : '调试'}</button>
+        </div>
       </header>
+      {audioOpen && <section id="audio-settings" className="audio-settings" aria-label="音频设置">
+        <label><input type="checkbox" checked={audioPrefs.effects}
+          onChange={e => changeAudio({...audioPrefs,effects:e.target.checked})}/> 音效</label>
+        <label><input type="checkbox" checked={audioPrefs.music}
+          onChange={e => changeAudio({...audioPrefs,music:e.target.checked})}/> 背景音乐</label>
+        <label>音量 <input type="range" min="0" max="1" step="0.05" value={audioPrefs.volume}
+          aria-label="音量" onChange={e => changeAudio({...audioPrefs,volume:Number(e.target.value)})}/></label>
+        <span className="sr-only" data-testid="audio-status">{audioRef.current?.status ?? 'locked'}</span>
+      </section>}
 
       <div className="score-hud" aria-label="游戏成绩">
         <span data-testid="score">分数 <strong>{state.score}</strong></span>
