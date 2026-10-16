@@ -14,6 +14,7 @@ export class BattlefieldRenderer {
   private readonly world: Readonly<World2>;
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
   private readonly grid: THREE.LineSegments;
+  private readonly playerMesh: THREE.Group;
   private readonly observer: ResizeObserver;
 
   constructor(private readonly host: HTMLDivElement, snapshot: GameSnapshot) {
@@ -87,6 +88,40 @@ export class BattlefieldRenderer {
     this.grid.visible = false;
     this.scene.add(this.grid);
 
+    // 独立三维显示对象：飞船坐标只能来自 GameSnapshot 的二维位置。
+    this.playerMesh = new THREE.Group();
+    const silhouette = new THREE.Shape();
+    silhouette.moveTo(0, 0.68);
+    silhouette.lineTo(-0.26, 0.22);
+    silhouette.lineTo(-1.2, -0.44);
+    silhouette.lineTo(-0.78, -0.65);
+    silhouette.lineTo(0, -0.32);
+    silhouette.lineTo(0.78, -0.65);
+    silhouette.lineTo(1.2, -0.44);
+    silhouette.lineTo(0.26, 0.22);
+    silhouette.closePath();
+    const hull = new THREE.ExtrudeGeometry(silhouette, {
+      depth: 0.32, bevelEnabled: true, bevelSegments: 1, steps: 1,
+      bevelSize: 0.065, bevelThickness: 0.07,
+    });
+    const hullMaterial = new THREE.MeshStandardMaterial({
+      color: 0x60d5e4, emissive: 0x14546b, emissiveIntensity: 0.48,
+      metalness: 0.65, roughness: 0.28,
+    });
+    this.resources.push(hull, hullMaterial);
+    this.playerMesh.add(new THREE.Mesh(hull, hullMaterial));
+    const cockpitGeometry = new THREE.SphereGeometry(0.23, 12, 8);
+    const cockpitMaterial = new THREE.MeshStandardMaterial({
+      color: 0xe4f9ff, emissive: 0x3b9ac2, emissiveIntensity: 0.4,
+      metalness: 0.15, roughness: 0.27,
+    });
+    this.resources.push(cockpitGeometry, cockpitMaterial);
+    const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+    cockpit.position.set(0, 0.03, 0.42);
+    cockpit.scale.set(0.75, 1.15, 0.55);
+    this.playerMesh.add(cockpit);
+    this.scene.add(this.playerMesh);
+
     this.host.dataset.worldWidth = String(this.world.width);
     this.host.dataset.worldHeight = String(this.world.height);
     this.host.dataset.debugGrid = 'off';
@@ -123,6 +158,10 @@ export class BattlefieldRenderer {
     if (state.world.width !== this.world.width || state.world.height !== this.world.height) {
       throw new Error('渲染器不能修改二维世界的规则尺寸');
     }
+    const point = toDisplayXY(state.player.position, state.world);
+    this.playerMesh.position.copy(point);
+    this.host.dataset.playerX = state.player.position.x.toFixed(4);
+    this.host.dataset.playerY = state.player.position.y.toFixed(4);
     this.renderer.render(this.scene, this.camera);
   }
 
