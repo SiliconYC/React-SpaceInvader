@@ -71,9 +71,9 @@ test('结束、重置、固定 tick、输入校验与状态快照隔离', () => 
 
 test('所有命中/边界工具只包含二维坐标并校验单位尺寸', () => {
   assert.equal(containsPoint(DEFAULT_WORLD, { x: 0, y: 0 }), true);
-  assert.equal(containsPoint(DEFAULT_WORLD, { x: 24.001, y: 0 }), false);
+  assert.equal(containsPoint(DEFAULT_WORLD, { x: 36.001, y: 0 }), false);
   assert.equal(containsRect(DEFAULT_WORLD, { x: 1, y: 1 }, { width: 2, height: 2 }), true);
   assert.equal(containsRect(DEFAULT_WORLD, { x: 0, y: 0 }, { width: 2, height: 2 }), false);
-  assert.deepEqual(clampCenter(DEFAULT_WORLD, { x: -30, y: 50 }, { width: 2, height: 4 }), { x: 1, y: 30 });
+  assert.deepEqual(clampCenter(DEFAULT_WORLD, { x: -30, y: 50 }, { width: 2, height: 4 }), { x: 1, y: 22 });
   assert.throws(() => clampCenter(DEFAULT_WORLD, { x: 0, y: 0 }, { width: 50, height: 2 }), RangeError);
 });

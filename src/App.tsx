@@ -10,7 +10,9 @@ const LABELS: Record<GameSnapshot['phase'], string> = {
 export default function App() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
+  const rendererRef = useRef<BattlefieldRenderer | null>(null);
   const [webgl, setWebgl] = useState<'ready' | 'error' | 'loading'>('loading');
+  const [debug, setDebug] = useState(() => new URLSearchParams(window.location.search).has('debug'));
   const [state, setState] = useState<GameSnapshot>(() => new GameEngine(GAME_SEED).snapshot());
 
   useEffect(() => {
@@ -27,14 +29,14 @@ export default function App() {
       engineRef.current = null;
       return;
     }
+    rendererRef.current = scene;
+    scene.setDebugVisible(new URLSearchParams(window.location.search).has('debug'));
     setWebgl('ready');
     let raf = 0;
     let lastTime: number | null = null;
     let lastUi = 0;
     const animate = (time: number) => {
-      if (lastTime !== null) {
-        engine.advanceFrame(Math.min((time - lastTime) / 1000, 0.25));
-      }
+      if (lastTime !== null) engine.advanceFrame(Math.min((time - lastTime) / 1000, 0.25));
       lastTime = time;
       scene.render(engine.snapshot());
       if (time - lastUi > 120) {
@@ -50,9 +52,14 @@ export default function App() {
       cancelAnimationFrame(raf);
       document.removeEventListener('visibilitychange', onVisibility);
       engineRef.current = null;
+      rendererRef.current = null;
       scene.dispose();
     };
   }, []);
+
+  useEffect(() => {
+    rendererRef.current?.setDebugVisible(debug);
+  }, [debug]);
 
   const send = (command: GameCommand) => {
     const engine = engineRef.current;
@@ -62,52 +69,45 @@ export default function App() {
   };
 
   return (
-    <main className="page">
-      <header className="top">
-        <div className="eyebrow">REACT / THREE.JS / 二维规则核心</div>
-        <h1>侵略者 <span className="version">P1 · 基础战场</span></h1>
-        <p>经典二维玩法，三维战场呈现。此阶段仅验证规则引擎与渲染分离。</p>
+    <main className="game-shell">
+      <div ref={viewportRef} className="viewport" data-testid="battlefield"
+        data-phase={state.phase} aria-label="二维规则战场，Three.js 三维渲染" role="img" />
+
+      <header className="game-header">
+        <div className="brand">
+          <h1>侵略者</h1>
+          <span className="preview-label">战场预览</span>
+        </div>
+        <button className="debug-toggle" type="button" aria-pressed={debug}
+          onClick={() => setDebug(value => !value)}>{debug ? '关闭调试' : '调试'}</button>
       </header>
 
-      <section className="battle-panel" aria-label="二维战场预览">
-        <div className="battle-toolbar">
-          <span className="status-dot" aria-hidden="true" />
-          <strong>战斗区域</strong>
-          <span>宽 {state.world.width} × 高 {state.world.height} 逻辑单位</span>
-          <span className="phase" data-testid="game-phase">{LABELS[state.phase]}</span>
-        </div>
-        <div ref={viewportRef} className="viewport" data-testid="battlefield"
-          data-phase={state.phase} aria-label="Three.js 二维战场的三维可视化" role="img" />
-        <div className="coordinates">
-          <span>左下角 (0,0)</span>
-          <span>单位和弹道都将在此二维平面内运行</span>
-          <span>右上角 ({state.world.width},{state.world.height})</span>
-        </div>
-      </section>
+      <div className="play-actions" aria-label="引擎操作">
+        {state.phase === 'ready' && <button type="button" onClick={() => send({ type: 'START' })}>开始</button>}
+        {state.phase === 'running' && <button type="button" onClick={() => send({ type: 'PAUSE' })}>暂停</button>}
+        {state.phase === 'paused' && <button type="button" onClick={() => send({ type: 'RESUME' })}>继续</button>}
+        {state.phase === 'ended' && <button type="button" onClick={() => { send({ type: 'RESET' }); send({ type: 'START' }); }}>重新开始</button>}
+        {state.phase !== 'ready' && <button className="secondary" type="button" onClick={() => send({ type: 'RESET' })}>重置</button>}
+      </div>
 
-      <section className="controls" aria-label="引擎状态测试">
-        <div className="metrics">
-          <div><small>固定更新频率</small><strong>60 Hz</strong></div>
-          <div><small>逻辑步数</small><strong data-testid="tick">{state.tick}</strong></div>
-          <div><small>游戏时间</small><strong>{state.elapsedSeconds.toFixed(2)} s</strong></div>
-          <div><small>随机种子</small><strong>{state.seed}</strong></div>
-        </div>
-        <div className="actions">
-          {state.phase === 'ready' && <button type="button" onClick={() => send({ type: 'START' })}>启动时钟</button>}
-          {state.phase === 'running' && <button type="button" onClick={() => send({ type: 'PAUSE' })}>暂停</button>}
-          {state.phase === 'paused' && <button type="button" onClick={() => send({ type: 'RESUME' })}>继续</button>}
+      {debug && (
+        <aside className="debug-panel" data-testid="debug-panel" aria-label="调试信息">
+          <dl>
+            <div><dt>状态</dt><dd data-testid="game-phase">{LABELS[state.phase]}</dd></div>
+            <div><dt>战场</dt><dd>{state.world.width} × {state.world.height}</dd></div>
+            <div><dt>固定步进</dt><dd>60 Hz</dd></div>
+            <div><dt>逻辑帧</dt><dd data-testid="tick">{state.tick}</dd></div>
+            <div><dt>时间</dt><dd>{state.elapsedSeconds.toFixed(2)} s</dd></div>
+            <div><dt>种子</dt><dd>{state.seed}</dd></div>
+          </dl>
           {(state.phase === 'running' || state.phase === 'paused') &&
-            <button type="button" className="secondary" onClick={() => send({ type: 'END' })}>结束测试</button>}
-          <button type="button" className="secondary" onClick={() => send({ type: 'RESET' })}>重置</button>
-        </div>
-      </section>
+            <button className="secondary" type="button" onClick={() => send({ type: 'END' })}>结束测试</button>}
+        </aside>
+      )}
 
-      <footer className="footer">
-        <span className={webgl === 'error' ? 'error' : 'ok'} data-testid="webgl-status">
-          {webgl === 'ready' ? '● Three.js / WebGL 正常' : webgl === 'error' ? '● 浏览器未能初始化 WebGL' : '● 正在初始化三维场景'}
-        </span>
-        <span>仅有战场网格与边界；飞船、敌机、射击将在后续 Issue 实现</span>
-      </footer>
+      <span data-testid="webgl-status" className={webgl === 'error' ? 'render-error' : 'sr-only'} role="status">
+        {webgl === 'ready' ? 'WebGL 正常' : webgl === 'error' ? 'WebGL 初始化失败' : '正在初始化 WebGL'}
+      </span>
     </main>
   );
 }
