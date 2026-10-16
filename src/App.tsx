@@ -49,6 +49,7 @@ export default function App() {
         if (lastTime !== null) engine.advanceFrame(Math.min((time - lastTime) / 1000, 0.25));
         lastTime = time;
         keyboard?.setEnabled(engine.snapshot().phase === 'running');
+        scene?.consumeEvents(engine.drainEvents());
         scene?.render(engine.snapshot());
         if (time - lastUi > 120) {
           setState(engine.snapshot());
@@ -105,8 +106,9 @@ export default function App() {
           onClick={() => setDebug(value => !value)}>{debug ? '关闭调试' : '调试'}</button>
       </header>
 
+      <div className="score-hud" data-testid="score">分数 <strong>{state.score}</strong></div>
       {loadError && <div role="alert" data-testid="level-error" className="level-error">{loadError}</div>}
-      <div className="control-hint">← → / A D <span>左右移动</span></div>
+      <div className="control-hint">← → / A D <span>移动</span><span>空格 · 射击</span></div>
       <div className="play-actions" aria-label="引擎操作">
         {!loadError && webgl === 'ready' && state.phase === 'ready' && <button type="button" onClick={() => send({ type: 'START' })}>开始</button>}
         {state.phase === 'running' && <button type="button" onClick={() => send({ type: 'PAUSE' })}>暂停</button>}
@@ -124,6 +126,8 @@ export default function App() {
             <div><dt>逻辑帧</dt><dd data-testid="tick">{state.tick}</dd></div>
             <div><dt>时间</dt><dd>{state.elapsedSeconds.toFixed(2)} s</dd></div>
             <div><dt>种子</dt><dd>{state.seed}</dd></div>
+            <div><dt>子弹</dt><dd>{state.projectiles.length}</dd></div>
+            <div><dt>敌机</dt><dd>{state.enemies.length}</dd></div>
           </dl>
           {(state.phase === 'running' || state.phase === 'paused') &&
             <button className="secondary" type="button" onClick={() => send({ type: 'END' })}>结束测试</button>}
