@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { GameEngine, type GameCommand, type GameSnapshot } from './core/engine.ts';
 import { BattlefieldRenderer } from './render/BattlefieldRenderer.ts';
 import { KeyboardController } from './input/KeyboardController.ts';
+import { TouchControls, type TouchAction } from './input/TouchControls.ts';
 import { GameAudio, readAudioPrefs, type AudioPrefs } from './audio/GameAudio.ts';
 import { appendScore,clearScores,readScores,scoresFor,type ScoreEntry } from './scores/localScores.ts';
 import { loadLevel } from './levels/load.ts';
@@ -20,6 +21,7 @@ export default function App() {
   const engineRef = useRef<GameEngine | null>(null);
   const rendererRef = useRef<BattlefieldRenderer | null>(null);
   const keyboardRef = useRef<KeyboardController | null>(null);
+  const touchRef = useRef<TouchControls | null>(null);
   const sessionRef = useRef<Session | null>(null);
   const [scoreRecords,setScoreRecords] = useState<ScoreEntry[]>(()=>readScores());
   const [scoresOpen,setScoresOpen] = useState(false);
@@ -73,6 +75,8 @@ export default function App() {
       const scene = new BattlefieldRenderer(host, engine.snapshot());
       scene.setDebugVisible(new URLSearchParams(window.location.search).has('debug'));
       const keyboard = new KeyboardController(command => { engine.dispatch(command); });
+      const touch = new TouchControls(command=>{engine.dispatch(command);});
+      touchRef.current = touch;
       engineRef.current = engine;
       rendererRef.current = scene;
       keyboardRef.current = keyboard;
@@ -80,12 +84,16 @@ export default function App() {
       let raf = 0;
       let lastTime: number | null = null;
       let lastUi = 0;
-      const onVisibility = () => { lastTime = null; audioRef.current?.setVisible(!document.hidden); };
+      const onVisibility = () => { lastTime = null; if(document.hidden)touch.releaseAll(); audioRef.current?.setVisible(!document.hidden); };
+      const onBlur=()=>touch.releaseAll();
+      window.addEventListener('blur',onBlur);
       document.addEventListener('visibilitychange', onVisibility);
       const animate = (time: number) => {
         if (lastTime !== null) engine.advanceFrame(Math.min((time - lastTime) / 1000, 0.25));
         lastTime = time;
         keyboard.setEnabled(engine.snapshot().phase === 'running');
+        touch.setEnabled(engine.snapshot().phase === 'running');
+        host.dataset.touchHeld=String(touch.activeCount);
         const snapshot = engine.snapshot();
         const events = engine.drainEvents();
         audioRef.current?.setPhase(snapshot.phase);
@@ -115,11 +123,14 @@ export default function App() {
         stop: () => {
           cancelAnimationFrame(raf);
           document.removeEventListener('visibilitychange', onVisibility);
+          window.removeEventListener('blur',onBlur);
           keyboard.dispose();
+          touch.dispose();
           scene.dispose();
           if (engineRef.current === engine) engineRef.current = null;
           if (rendererRef.current === scene) rendererRef.current = null;
           if (keyboardRef.current === keyboard) keyboardRef.current = null;
+          if (touchRef.current === touch) touchRef.current = null;
         },
       };
       setLevelName(level.metadata.name);
@@ -158,8 +169,18 @@ export default function App() {
       if (command.type === 'RESET') audioRef.current?.reset();
       audioRef.current?.setPhase(engine.snapshot().phase);
       keyboardRef.current?.setEnabled(engine.snapshot().phase === 'running');
+      touchRef.current?.setEnabled(engine.snapshot().phase === 'running');
       setState(engine.snapshot());
     }
+  };
+
+  const touchDown=(action:TouchAction,event:ReactPointerEvent<HTMLButtonElement>)=>{
+    event.preventDefault();
+    try {event.currentTarget.setPointerCapture(event.pointerId);} catch {/* unsupported */}
+    touchRef.current?.down(action,event.pointerId);
+  };
+  const touchUp=(event:ReactPointerEvent<HTMLButtonElement>)=>{
+    touchRef.current?.up(event.pointerId);
   };
 
   return (
@@ -237,6 +258,22 @@ export default function App() {
       )}
       {state.phase === 'paused' && <span className="pause-overlay" data-testid="pause-message">已暂停</span>}
       <div className="control-hint">← → / A D <span>移动</span><span>空格 · 射击</span></div>
+      <nav className="touch-controls" aria-label="触屏战斗控制">
+        <div className="touch-movement">
+          {(['left','right'] as const).map(action=>
+            <button key={action} type="button" disabled={state.phase!=='running'}
+              className="touch-key" data-testid={'touch-'+action}
+              aria-label={action==='left'?'向左移动':'向右移动'}
+              onPointerDown={e=>touchDown(action,e)} onPointerUp={touchUp}
+              onPointerCancel={touchUp} onLostPointerCapture={touchUp}>
+              {action==='left'?'◀':'▶'}
+            </button>)}
+        </div>
+        <button type="button" className="touch-key touch-fire" data-testid="touch-fire"
+          disabled={state.phase!=='running'} aria-label="持续射击"
+          onPointerDown={e=>touchDown('fire',e)} onPointerUp={touchUp}
+          onPointerCancel={touchUp} onLostPointerCapture={touchUp}>射击</button>
+      </nav>
       <div className="play-actions" aria-label="引擎操作">
         {!loadError && webgl === 'ready' && state.phase === 'ready' &&
           <button type="button" onClick={() => send({ type: 'START' })}>开始</button>}
