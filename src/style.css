@@ -218,3 +218,27 @@ h1 { margin: 0; font-size: clamp(18px, 2vw, 24px); line-height: 1.2; font-weight
 .clear-scores{margin-top:12px;background:none;border:0;color:#a6bac8;font-size:11px;padding:6px 2px}
 .clear-scores:hover{color:#fff}
 .debug-toggle:disabled{opacity:.33;cursor:default}
+
+/* 原生 PointerEvent 多指控制；默认桌面隐藏，不阻挡 HUD/战场主体 */
+.touch-controls{display:none;position:absolute;z-index:4;left:0;right:0;
+ bottom:max(14px,env(safe-area-inset-bottom));padding:0 max(15px,env(safe-area-inset-left));
+ align-items:center;justify-content:space-between;pointer-events:none;touch-action:none}
+.touch-movement{display:flex;gap:14px;pointer-events:auto}
+.touch-key{pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;
+ -webkit-tap-highlight-color:transparent;min-width:60px;min-height:60px;
+ border:1px solid rgba(113,160,184,.55);border-radius:12px;
+ color:#d2e7ee;background:rgba(15,36,52,.56);font-size:20px;line-height:1}
+.touch-key:active{background:rgba(46,117,146,.55)}
+.touch-key:disabled{opacity:.38;pointer-events:none}
+.touch-fire{min-width:88px;font-size:16px;font-weight:600}
+@media(pointer:coarse){
+ .touch-controls{display:flex}
+ .control-hint{display:none}
+ .play-actions{bottom:max(92px,calc(env(safe-area-inset-bottom) + 82px))}
+ .game-header{top:max(12px,env(safe-area-inset-top))}
+}
+@media(pointer:coarse) and (max-height:520px){
+ .touch-key{min-width:54px;min-height:54px}
+ .touch-controls{bottom:max(7px,env(safe-area-inset-bottom))}
+ .play-actions{bottom:max(67px,calc(env(safe-area-inset-bottom) + 63px))}
+}

@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { GameEngine, type GameCommand, type GameSnapshot } from './core/engine.ts';
 import { BattlefieldRenderer } from './render/BattlefieldRenderer.ts';
 import { KeyboardController } from './input/KeyboardController.ts';
+import { TouchControls, type TouchAction } from './input/TouchControls.ts';
 import { GameAudio, readAudioPrefs, type AudioPrefs } from './audio/GameAudio.ts';
 import { appendScore,clearScores,readScores,scoresFor,type ScoreEntry } from './scores/localScores.ts';
 import { loadLevel } from './levels/load.ts';
@@ -20,6 +21,7 @@ export default function App() {
   const engineRef = useRef<GameEngine | null>(null);
   const rendererRef = useRef<BattlefieldRenderer | null>(null);
   const keyboardRef = useRef<KeyboardController | null>(null);
+  const touchRef = useRef<TouchControls | null>(null);
   const sessionRef = useRef<Session | null>(null);
   const [scoreRecords,setScoreRecords] = useState<ScoreEntry[]>(()=>readScores());
   const [scoresOpen,setScoresOpen] = useState(false);
@@ -31,7 +33,7 @@ export default function App() {
   const getAudio = () => audioRef.current ?? (audioRef.current = new GameAudio(audioPrefs));
   const changeAudio = (next: AudioPrefs) => { setAudioPrefs(next); getAudio().setPrefs(next); };
 
-  const [webgl, setWebgl] = useState<'ready' | 'error' | 'loading'>('loading');
+  const [webgl, setWebgl] = useState<'ready' | 'error' | 'loading' | 'lost'>('loading');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [levelName, setLevelName] = useState('关卡加载中');
   const [catalog, setCatalog] = useState<LevelCatalog | null>(null);
@@ -70,22 +72,35 @@ export default function App() {
       setScoresOpen(false);
       audioRef.current?.reset();
       audioRef.current?.setPhase('ready');
-      const scene = new BattlefieldRenderer(host, engine.snapshot());
+      let lastTime: number | null = null;
+      const scene = new BattlefieldRenderer(host, engine.snapshot(),lost=>{
+        setWebgl(lost?'lost':'ready');
+        lastTime=null;
+        if(lost){touchRef.current?.releaseAll();audioRef.current?.setVisible(false);}
+        else audioRef.current?.setVisible(!document.hidden);
+      });
       scene.setDebugVisible(new URLSearchParams(window.location.search).has('debug'));
       const keyboard = new KeyboardController(command => { engine.dispatch(command); });
+      const touch = new TouchControls(command=>{engine.dispatch(command);});
+      touchRef.current = touch;
       engineRef.current = engine;
       rendererRef.current = scene;
       keyboardRef.current = keyboard;
 
       let raf = 0;
-      let lastTime: number | null = null;
       let lastUi = 0;
-      const onVisibility = () => { lastTime = null; audioRef.current?.setVisible(!document.hidden); };
+      const onVisibility = () => { lastTime = null; if(document.hidden)touch.releaseAll(); audioRef.current?.setVisible(!document.hidden); };
+      const onBlur=()=>touch.releaseAll();
+      window.addEventListener('blur',onBlur);
       document.addEventListener('visibilitychange', onVisibility);
       const animate = (time: number) => {
-        if (lastTime !== null) engine.advanceFrame(Math.min((time - lastTime) / 1000, 0.25));
-        lastTime = time;
-        keyboard.setEnabled(engine.snapshot().phase === 'running');
+        const canRun=!document.hidden && !scene.isContextLost;
+        if(canRun && lastTime!==null)engine.advanceFrame(Math.min((time-lastTime)/1000,.25));
+        lastTime=canRun?time:null;
+        keyboard.setEnabled(canRun&&engine.snapshot().phase==='running');
+        touch.setEnabled(canRun&&engine.snapshot().phase==='running');
+        host.dataset.touchHeld=String(touch.activeCount);
+        host.dataset.touchActions=touch.activeActions;
         const snapshot = engine.snapshot();
         const events = engine.drainEvents();
         audioRef.current?.setPhase(snapshot.phase);
@@ -115,11 +130,14 @@ export default function App() {
         stop: () => {
           cancelAnimationFrame(raf);
           document.removeEventListener('visibilitychange', onVisibility);
+          window.removeEventListener('blur',onBlur);
           keyboard.dispose();
+          touch.dispose();
           scene.dispose();
           if (engineRef.current === engine) engineRef.current = null;
           if (rendererRef.current === scene) rendererRef.current = null;
           if (keyboardRef.current === keyboard) keyboardRef.current = null;
+          if (touchRef.current === touch) touchRef.current = null;
         },
       };
       setLevelName(level.metadata.name);
@@ -158,8 +176,18 @@ export default function App() {
       if (command.type === 'RESET') audioRef.current?.reset();
       audioRef.current?.setPhase(engine.snapshot().phase);
       keyboardRef.current?.setEnabled(engine.snapshot().phase === 'running');
+      touchRef.current?.setEnabled(engine.snapshot().phase === 'running');
       setState(engine.snapshot());
     }
+  };
+
+  const touchDown=(action:TouchAction,event:ReactPointerEvent<HTMLButtonElement>)=>{
+    event.preventDefault();
+    try {event.currentTarget.setPointerCapture(event.pointerId);} catch {/* unsupported */}
+    touchRef.current?.down(action,event.pointerId);
+  };
+  const touchUp=(event:ReactPointerEvent<HTMLButtonElement>)=>{
+    touchRef.current?.up(event.pointerId);
   };
 
   return (
@@ -237,6 +265,22 @@ export default function App() {
       )}
       {state.phase === 'paused' && <span className="pause-overlay" data-testid="pause-message">已暂停</span>}
       <div className="control-hint">← → / A D <span>移动</span><span>空格 · 射击</span></div>
+      <nav className="touch-controls" aria-label="触屏战斗控制">
+        <div className="touch-movement">
+          {(['left','right'] as const).map(action=>
+            <button key={action} type="button" disabled={state.phase!=='running'}
+              className="touch-key" data-testid={'touch-'+action}
+              aria-label={action==='left'?'向左移动':'向右移动'}
+              onPointerDown={e=>touchDown(action,e)} onPointerUp={touchUp}
+              onPointerCancel={touchUp} onLostPointerCapture={touchUp}>
+              {action==='left'?'◀':'▶'}
+            </button>)}
+        </div>
+        <button type="button" className="touch-key touch-fire" data-testid="touch-fire"
+          disabled={state.phase!=='running'} aria-label="持续射击"
+          onPointerDown={e=>touchDown('fire',e)} onPointerUp={touchUp}
+          onPointerCancel={touchUp} onLostPointerCapture={touchUp}>射击</button>
+      </nav>
       <div className="play-actions" aria-label="引擎操作">
         {!loadError && webgl === 'ready' && state.phase === 'ready' &&
           <button type="button" onClick={() => send({ type: 'START' })}>开始</button>}
@@ -267,8 +311,8 @@ export default function App() {
         </aside>
       )}
 
-      <span data-testid="webgl-status" className={webgl === 'error' ? 'render-error' : 'sr-only'} role="status">
-        {webgl === 'ready' ? 'WebGL 正常' : webgl === 'error' ? 'WebGL 初始化失败' : '正在初始化 WebGL'}
+      <span data-testid="webgl-status" className={webgl === 'error' || webgl === 'lost' ? 'render-error' : 'sr-only'} role="status">
+        {webgl === 'ready' ? 'WebGL 正常' : webgl === 'lost' ? 'WebGL 已断开，等待恢复' : webgl === 'error' ? 'WebGL 初始化失败' : '正在初始化 WebGL'}
       </span>
     </main>
   );
