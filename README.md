@@ -2,7 +2,7 @@
 
 基于 **React + TypeScript + Three.js + Vite** 的浏览器游戏：用立体模型呈现经典二维《太空侵略者》，而不引入三维飞行操作。
 
-> **当前状态：** React / Three.js 联通测试已建立，**游戏功能尚未实现**；第一阶段 Issue #3–#9 已创建，见 [P1 路线图](docs/ROADMAP.md)。
+> **当前状态：** Issue #3 已建立二维确定性核心与 Three.js 战场显示；飞船、敌机、射击、关卡尚未实现。下一步 Issue #4。见 [P1 路线图](docs/ROADMAP.md)。
 
 ## 核心设计（2.5D）
 
@@ -15,8 +15,9 @@
 
 - 默认开发/PR 合并分支：`dev`（不改 `main`）。
 - [在线 Pages](https://siliconyc.github.io/React-SpaceInvader/)：GitHub Pages 的 **Source = GitHub Actions**，合并 `dev` 后自动构建发布。地址基础路径 `/React-SpaceInvader/`。
-- Node.js 22。当前本地命令：`npm install`、`npm run dev`、`npm run verify`（类型检查、Vite 生产构建、静态资源冒烟）。
-- [Issue #3](https://github.com/SiliconYC/React-SpaceInvader/issues/3) 须补齐锁文件和 `npm ci` 可复现安装；此项尚未实现，不得声称依赖已经完全锁定。
+- Node.js 22，使用已提交的 `package-lock.json`：`npm ci`、`npm run dev`、`npm run verify`（规则单测、类型检查、生产构建、静态产物检查）。
+- 浏览器验收：先 `npx playwright install chromium`，再 `npm run test:browser`（依赖 Chromium，验证战场渲染、缩放坐标、命令交互与浏览器异常）。
+- `src/core/` 是完全独立于 React / DOM / Three.js 的纯 TypeScript，固定 60Hz 和种子随机数；`src/render/` 仅将逻辑世界投影到三维网格。
 - Pages 成功发布不等同实际浏览器可玩验收；各个功能 Issue 应提供实际交互与逻辑测试证据。
 
 ## 开发规范与文档
@@ -25,4 +26,4 @@
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)：二维逻辑与三维渲染隔离、数据驱动关卡、测试及发布。
 - [docs/ROADMAP.md](docs/ROADMAP.md)：P1 七项 Issue、依赖顺序、最小完整可玩闭环。
 
-每个 Issue 从 `dev` 建立独立短期分支，细粒度 Commit/Push，独立 PR 合并后部署 GitHub Pages，再验收增量。**当前仅更新规划文档，不实现游戏功能。**
+每个 Issue 从 `dev` 建立独立短期分支，细粒度 Commit/Push，独立 PR 合并后部署 GitHub Pages，再验收增量。
