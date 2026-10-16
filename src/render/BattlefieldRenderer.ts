@@ -171,7 +171,7 @@ export class BattlefieldRenderer {
     this.renderer.render(this.scene, this.camera);
   }
 
-  /** 静态敌阵在本阶段不移动；未来运动阶段也只从 state 同步坐标。 */
+  /** 每帧读取逻辑快照，渲染器不计算位移/速度/折返。 */
   private syncEnemies(state: GameSnapshot): void {
     const active = new Set(state.enemies.map(enemy => enemy.id));
     for (const [id, mesh] of this.enemyMeshes) {
@@ -190,6 +190,10 @@ export class BattlefieldRenderer {
       mesh.position.copy(toDisplayXY(enemy.position, state.world));
     }
     this.host.dataset.enemyCount = String(this.enemyMeshes.size);
+    this.host.dataset.enemyFirstX = state.enemies[0]?.position.x.toFixed(4) ?? '';
+    this.host.dataset.enemyFirstY = state.enemies[0]?.position.y.toFixed(4) ?? '';
+    this.host.dataset.enemyDirection = String(state.formationDirection);
+    this.host.dataset.enemyTurns = String(state.formationTurns);
   }
 
   private createEnemyMesh(enemy: EnemyState): THREE.Mesh {
