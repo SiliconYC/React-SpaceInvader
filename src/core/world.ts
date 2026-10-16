@@ -2,7 +2,8 @@
 export interface Point2 { readonly x: number; readonly y: number }
 export interface Size2 { readonly width: number; readonly height: number }
 export interface World2 extends Size2 {}
-export const DEFAULT_WORLD: Readonly<World2> = Object.freeze({ width: 24, height: 32 });
+/** 横向战场，逻辑宽高比 3:2；屏幕尺寸变化只影响投影，不修改此值。 */
+export const DEFAULT_WORLD: Readonly<World2> = Object.freeze({ width: 36, height: 24 });
 
 export function validateWorld(world: World2): World2 {
   if (!Number.isFinite(world.width) || !Number.isFinite(world.height) ||

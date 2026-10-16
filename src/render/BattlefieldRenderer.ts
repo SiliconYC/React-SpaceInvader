@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { GameSnapshot } from '../core/engine.ts';
 import type { Point2, World2 } from '../core/world.ts';
 
-/** 此映射仅供显示；z 为固定 0，不写回任何游戏状态或参与碰撞。 */
+/** 世界坐标在二维，z 仅为渲染层深度，不参与任何游戏规则。 */
 export function toDisplayXY(point: Point2, world: World2): THREE.Vector3 {
   return new THREE.Vector3(point.x - world.width / 2, point.y - world.height / 2, 0);
 }
@@ -13,99 +13,99 @@ export class BattlefieldRenderer {
   private readonly camera = new THREE.OrthographicCamera();
   private readonly world: Readonly<World2>;
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
-  private readonly border: THREE.MeshStandardMaterial;
+  private readonly grid: THREE.LineSegments;
   private readonly observer: ResizeObserver;
 
   constructor(private readonly host: HTMLDivElement, snapshot: GameSnapshot) {
     this.world = snapshot.world;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.renderer.setClearColor(0x060c19);
+    this.renderer.setClearColor(0x050913, 1);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.5;
+    this.renderer.toneMappingExposure = 1.1;
     this.renderer.domElement.dataset.renderer = 'threejs';
     host.appendChild(this.renderer.domElement);
 
-    this.camera.position.set(0, -0.8, 45);
+    // 镜头只根据视口改变投影尺寸，不改动逻辑世界的宽高或比例。
+    this.camera.position.set(0, 0, 50);
     this.camera.lookAt(0, 0, 0);
-    this.scene.add(new THREE.AmbientLight(0x99cbef, 1.2));
-    const key = new THREE.DirectionalLight(0x63c7ff, 2.6);
-    key.position.set(-9, 12, 20);
+    this.scene.add(new THREE.AmbientLight(0x9ebad6, 1));
+    const key = new THREE.DirectionalLight(0x8baeca, 1.3);
+    key.position.set(-8, 12, 16);
     this.scene.add(key);
-    const fill = new THREE.PointLight(0x1ee4c7, 55);
-    fill.position.set(this.world.width / 2, -this.world.height / 3, 7);
-    this.scene.add(fill);
 
-    const boardGeometry = new THREE.BoxGeometry(this.world.width, this.world.height, 0.6);
+    const boardGeometry = new THREE.BoxGeometry(this.world.width, this.world.height, 0.4);
     const boardMaterial = new THREE.MeshStandardMaterial({
-      color: 0x0c2136, metalness: 0.48, roughness: 0.44,
+      color: 0x0c1928, metalness: 0.12, roughness: 0.86,
     });
     this.resources.push(boardGeometry, boardMaterial);
     const board = new THREE.Mesh(boardGeometry, boardMaterial);
-    board.position.z = -0.42;
+    board.position.z = -0.35;
     this.scene.add(board);
 
-    const gridVertices: THREE.Vector3[] = [];
-    for (let x = 0; x <= this.world.width + 1e-6; x += 2) {
-      const px = x - this.world.width / 2;
-      gridVertices.push(new THREE.Vector3(px, -this.world.height / 2, 0), new THREE.Vector3(px, this.world.height / 2, 0));
+    // 默认仅用几处低对比角标提示边界，不使用高亮外框。
+    const halfW = this.world.width / 2;
+    const halfH = this.world.height / 2;
+    const corner = Math.min(this.world.width, this.world.height) * 0.055;
+    const corners: THREE.Vector3[] = [];
+    for (const sx of [-1, 1]) {
+      for (const sy of [-1, 1]) {
+        const x = sx * halfW;
+        const y = sy * halfH;
+        corners.push(
+          new THREE.Vector3(x - sx * corner, y, 0.02),
+          new THREE.Vector3(x, y, 0.02),
+          new THREE.Vector3(x, y, 0.02),
+          new THREE.Vector3(x, y - sy * corner, 0.02),
+        );
+      }
     }
-    for (let y = 0; y <= this.world.height + 1e-6; y += 2) {
-      const py = y - this.world.height / 2;
-      gridVertices.push(new THREE.Vector3(-this.world.width / 2, py, 0), new THREE.Vector3(this.world.width / 2, py, 0));
-    }
-    const gridGeometry = new THREE.BufferGeometry().setFromPoints(gridVertices);
-    const gridMaterial = new THREE.LineBasicMaterial({ color: 0x24536a, transparent: true, opacity: 0.67 });
-    this.resources.push(gridGeometry, gridMaterial);
-    this.scene.add(new THREE.LineSegments(gridGeometry, gridMaterial));
-
-    this.border = new THREE.MeshStandardMaterial({
-      color: 0x35bde3, emissive: 0x0b6083, emissiveIntensity: 1.1,
-      metalness: 0.38, roughness: 0.3,
+    const markerGeometry = new THREE.BufferGeometry().setFromPoints(corners);
+    const markerMaterial = new THREE.LineBasicMaterial({
+      color: 0x638097, transparent: true, opacity: 0.36,
     });
-    this.resources.push(this.border);
-    const thickness = 0.16;
-    for (const [width, height, x, y] of [
-      [this.world.width + thickness * 2, thickness, 0, -this.world.height / 2],
-      [this.world.width + thickness * 2, thickness, 0, this.world.height / 2],
-      [thickness, this.world.height, -this.world.width / 2, 0],
-      [thickness, this.world.height, this.world.width / 2, 0],
-    ]) {
-      const geometry = new THREE.BoxGeometry(width, height, 0.44);
-      this.resources.push(geometry);
-      const edge = new THREE.Mesh(geometry, this.border);
-      edge.position.set(x, y, 0.17);
-      this.scene.add(edge);
-    }
+    this.resources.push(markerGeometry, markerMaterial);
+    this.scene.add(new THREE.LineSegments(markerGeometry, markerMaterial));
 
-    // 装饰层位于战斗平面后方；不影响二维规则或边界。
-    const dots: THREE.Vector3[] = [];
-    for (let i = 0; i < 120; i++) {
-      const x = Math.sin(i * 127.1) * 438.5453;
-      const y = Math.sin(i * 311.7 + 2) * 963.122;
-      const px = (x - Math.floor(x) - 0.5) * (this.world.width + 16);
-      const py = (y - Math.floor(y) - 0.5) * (this.world.height + 16);
-      dots.push(new THREE.Vector3(px, py, -3));
+    // 网格只供主动打开调试模式时核对二维位置。
+    const gridPoints: THREE.Vector3[] = [];
+    for (let x = 0; x <= this.world.width; x += 2) {
+      const px = x - halfW;
+      gridPoints.push(new THREE.Vector3(px, -halfH, 0.015), new THREE.Vector3(px, halfH, 0.015));
     }
-    const dotsGeometry = new THREE.BufferGeometry().setFromPoints(dots);
-    const dotsMaterial = new THREE.PointsMaterial({ color: 0x77b3d0, size: 0.11, transparent: true, opacity: 0.7, sizeAttenuation: true });
-    this.resources.push(dotsGeometry, dotsMaterial);
-    this.scene.add(new THREE.Points(dotsGeometry, dotsMaterial));
+    for (let y = 0; y <= this.world.height; y += 2) {
+      const py = y - halfH;
+      gridPoints.push(new THREE.Vector3(-halfW, py, 0.015), new THREE.Vector3(halfW, py, 0.015));
+    }
+    const gridGeometry = new THREE.BufferGeometry().setFromPoints(gridPoints);
+    const gridMaterial = new THREE.LineBasicMaterial({
+      color: 0x365c78, transparent: true, opacity: 0.4,
+    });
+    this.resources.push(gridGeometry, gridMaterial);
+    this.grid = new THREE.LineSegments(gridGeometry, gridMaterial);
+    this.grid.visible = false;
+    this.scene.add(this.grid);
 
     this.host.dataset.worldWidth = String(this.world.width);
     this.host.dataset.worldHeight = String(this.world.height);
+    this.host.dataset.debugGrid = 'off';
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(this.host);
     this.resize();
     this.render(snapshot);
   }
 
+  setDebugVisible(enabled: boolean): void {
+    this.grid.visible = enabled;
+    this.host.dataset.debugGrid = enabled ? 'on' : 'off';
+  }
+
   resize(): void {
     const width = Math.max(this.host.clientWidth, 1);
     const height = Math.max(this.host.clientHeight, 1);
     const aspect = width / height;
-    const viewHeight = Math.max(this.world.height + 4, (this.world.width + 4) / aspect);
+    const viewHeight = Math.max(this.world.height + 2.2, (this.world.width + 2.2) / aspect);
     const viewWidth = viewHeight * aspect;
     this.camera.left = -viewWidth / 2;
     this.camera.right = viewWidth / 2;
@@ -121,9 +121,8 @@ export class BattlefieldRenderer {
 
   render(state: GameSnapshot): void {
     if (state.world.width !== this.world.width || state.world.height !== this.world.height) {
-      throw new Error('战场尺寸只能从游戏状态初始化，不可由渲染器修改');
+      throw new Error('渲染器不能修改二维世界的规则尺寸');
     }
-    this.border.emissiveIntensity = state.phase === 'running' ? 1.5 : 1.0;
     this.renderer.render(this.scene, this.camera);
   }
 
