@@ -36,10 +36,10 @@ export interface LevelPlan {
   readonly victory: Readonly<{ type: 'clear-all-waves' }>;
 }
 
-/** Issue #5 仅实例化首波静态编队。后续波次及移动留给 #6/#9。 */
-export function firstWaveEnemies(level: LevelPlan): readonly EnemyState[] {
-  const wave = level.waves[0];
-  if (!wave || wave.spawnAtSeconds !== 0) throw new RangeError('首波必须在第 0 秒生成');
+/** 纯二维阵列生成：关卡、波次索引决定敌机类型、位置、数量及唯一 ID。 */
+export function waveEnemies(level: LevelPlan, index: number): readonly EnemyState[] {
+  const wave = level.waves[index];
+  if (!wave || !Number.isInteger(index)) throw new RangeError('波次索引无效');
   const f = wave.formation;
   const size = ENEMY_SIZES[f.type];
   const enemies: EnemyState[] = [];
@@ -54,4 +54,10 @@ export function firstWaveEnemies(level: LevelPlan): readonly EnemyState[] {
     }
   }
   return Object.freeze(enemies);
+}
+
+/** 兼容既有单波测试；实际生成统一走 waveEnemies。 */
+export function firstWaveEnemies(level: LevelPlan): readonly EnemyState[] {
+  if (level.waves[0]?.spawnAtSeconds !== 0) throw new RangeError('首波必须在第 0 秒生成');
+  return waveEnemies(level, 0);
 }
