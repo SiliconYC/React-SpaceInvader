@@ -9,5 +9,7 @@ export async function loadLevel(id: string, signal?: AbortSignal): Promise<Level
   let payload: unknown;
   try { payload = await response.json() as unknown; }
   catch { throw new LevelValidationError('关卡文件不是有效 JSON'); }
-  return parseLevel(payload);
+  const level = parseLevel(payload);
+  if (level.id !== id) throw new LevelValidationError('文件标识与所选关卡不一致：' + id);
+  return level;
 }
