@@ -3,7 +3,7 @@
   "id": "first-contact",
   "metadata": {
     "name": "第一关 · 初次接触",
-    "description": "初始静态侦察编队；后续阶段加入折返、攻击及多波次。"
+    "description": "经典敌阵横移、碰壁折返与下压；后续阶段加入射击及多波次。"
   },
   "world": {
     "width": 36,
@@ -24,7 +24,9 @@
       },
       "movement": {
         "horizontalSpeed": 2.4,
-        "descentPerTurn": 0.9
+        "descentPerTurn": 0.9,
+        "startDirection": 1,
+        "moveEveryTicks": 1
       },
       "attack": {
         "shotsPerMinute": 10,

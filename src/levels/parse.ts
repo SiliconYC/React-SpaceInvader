@@ -83,7 +83,7 @@ export function parseLevel(input: unknown): LevelPlan {
         throw new LevelValidationError(p + '.formation 编队越界或侵入玩家区域');
       }
     }
-    const m = obj(wave.movement, p + '.movement', ['horizontalSpeed', 'descentPerTurn']);
+    const m = obj(wave.movement, p + '.movement', ['horizontalSpeed', 'descentPerTurn', 'startDirection', 'moveEveryTicks']);
     const a = obj(wave.attack, p + '.attack', ['shotsPerMinute', 'projectileSpeed']);
     return Object.freeze({
       id: waveId, spawnAtSeconds,
@@ -91,6 +91,11 @@ export function parseLevel(input: unknown): LevelPlan {
       movement: Object.freeze({
         horizontalSpeed: num(m.horizontalSpeed, p + '.movement.horizontalSpeed', 0, 40),
         descentPerTurn: num(m.descentPerTurn, p + '.movement.descentPerTurn', 0, 30),
+        startDirection: (() => {
+          if (m.startDirection !== 1 && m.startDirection !== -1) throw new LevelValidationError(p + '.movement.startDirection 必须是 -1 或 1');
+          return m.startDirection;
+        })(),
+        moveEveryTicks: num(m.moveEveryTicks, p + '.movement.moveEveryTicks', 1, 30, true),
       }),
       attack: Object.freeze({
         shotsPerMinute: num(a.shotsPerMinute, p + '.attack.shotsPerMinute', 0, 240),

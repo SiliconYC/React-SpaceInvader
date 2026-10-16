@@ -122,7 +122,7 @@ test('游戏飞船始终受二维边界约束，页面包含实际三维模型',
   expect(x).toBeLessThanOrEqual(36 - 1.25);
 });
 
-test('真实关卡 JSON 加载并渲染 24 架静态敌机，且不会随时间自行移动', async ({ page }) => {
+test('真实关卡 JSON 加载并渲染 24 架会进攻的敌机', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('./');
@@ -131,7 +131,8 @@ test('真实关卡 JSON 加载并渲染 24 架静态敌机，且不会随时间�
   const stage = page.getByTestId('battlefield');
   await expect(stage).toHaveAttribute('data-enemy-count', '24');
   await page.getByRole('button', { name: '开始', exact: true }).click();
-  await page.waitForTimeout(260);
+  const initialX = Number(await stage.getAttribute('data-enemy-first-x'));
+  await expect.poll(async () => Number(await stage.getAttribute('data-enemy-first-x'))).toBeGreaterThan(initialX + 0.25);
   await expect(stage).toHaveAttribute('data-enemy-count', '24');
   expect(errors).toEqual([]);
 });
