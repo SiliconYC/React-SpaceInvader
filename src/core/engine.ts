@@ -6,7 +6,8 @@ export const PLAYER_WIDTH = 2.5;
 export const PLAYER_HEIGHT = 1.4;
 export const PLAYER_SPEED = 12; // 每秒世界逻辑单位
 import { initialRandomState, nextRandomState, validateSeed } from './random.ts';
-import { firstWaveEnemies, type EnemyState, type LevelPlan } from './level.ts';
+import { firstWaveEnemies, type EnemyState, type LevelPlan, type WavePlan } from './level.ts';
+import { advanceFormation, type FormationDirection } from './formation.ts';
 
 export const FIXED_HZ = 60;
 export const FIXED_DELTA_SECONDS = 1 / FIXED_HZ;
@@ -28,6 +29,8 @@ export interface GameSnapshot {
   readonly player: Readonly<PlayerState>;
   readonly levelId: string | null;
   readonly enemies: readonly EnemyState[];
+  readonly formationDirection: FormationDirection;
+  readonly formationTurns: number;
 }
 export type GameEvent =
   | { readonly type: 'phase-changed'; readonly from: GamePhase; readonly to: GamePhase; readonly tick: number }
@@ -49,7 +52,12 @@ export class GameEngine {
   private readonly seed: number;
   private readonly world: Readonly<World2>;
   private readonly levelId: string | null;
-  private readonly enemies: readonly EnemyState[];
+  private enemies: readonly EnemyState[];
+  private readonly initialEnemies: readonly EnemyState[];
+  private readonly formationSettings: WavePlan['movement'] | null;
+  private readonly formationSpeedMultiplier: number;
+  private formationDirection: FormationDirection;
+  private formationTurns = 0;
   private events: GameEvent[] = [];
   private movement: -1 | 0 | 1 = 0;
   private playerX: number;
@@ -63,7 +71,11 @@ export class GameEngine {
       throw new RangeError('关卡宽高必须与引擎逻辑世界一致');
     }
     this.levelId = level?.id ?? null;
-    this.enemies = level ? firstWaveEnemies(level) : Object.freeze([] as EnemyState[]);
+    this.initialEnemies = level ? firstWaveEnemies(level) : Object.freeze([] as EnemyState[]);
+    this.enemies = this.initialEnemies;
+    this.formationSettings = level?.waves[0].movement ?? null;
+    this.formationSpeedMultiplier = level?.difficulty.speedMultiplier ?? 1;
+    this.formationDirection = this.formationSettings?.startDirection ?? 1;
     if (this.world.width < PLAYER_WIDTH || this.world.height < PLAYER_HEIGHT + 2) {
       throw new RangeError('战场太小，无法容纳玩家飞船');
     }
@@ -76,6 +88,7 @@ export class GameEngine {
       phase: this.phase, tick: this.tick, elapsedSeconds: this.tick / FIXED_HZ,
       seed: this.seed, randomState: this.randomState, world: this.world,
       levelId: this.levelId, enemies: this.enemies,
+      formationDirection: this.formationDirection, formationTurns: this.formationTurns,
       player: Object.freeze({
         position: Object.freeze({ x: this.playerX, y: this.playerY }),
         width: PLAYER_WIDTH, height: PLAYER_HEIGHT,
@@ -97,6 +110,9 @@ export class GameEngine {
       this.accumulator = 0;
       this.randomState = initialRandomState(this.seed);
       this.playerX = this.world.width / 2;
+      this.enemies = this.initialEnemies;
+      this.formationDirection = this.formationSettings?.startDirection ?? 1;
+      this.formationTurns = 0;
       this.movement = 0;
       this.events.push({ type: 'game-reset', tick: 0 });
       return { accepted: true };
@@ -125,6 +141,13 @@ export class GameEngine {
         y: this.playerY,
       }, { width: PLAYER_WIDTH, height: PLAYER_HEIGHT }).x;
       this.tick += 1;
+      if (this.formationSettings && this.tick % this.formationSettings.moveEveryTicks === 0) {
+        const result = advanceFormation(this.enemies, this.world, this.formationSettings,
+          this.formationSpeedMultiplier, this.formationDirection, this.formationSettings.moveEveryTicks);
+        this.enemies = result.enemies;
+        this.formationDirection = result.direction;
+        this.formationTurns += result.turns;
+      }
     }
     return count;
   }

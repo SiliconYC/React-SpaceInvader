@@ -23,7 +23,7 @@ export interface WavePlan {
     startX: number; startY: number;
     spacingX: number; spacingY: number;
   }>;
-  readonly movement: Readonly<{ horizontalSpeed: number; descentPerTurn: number }>;
+  readonly movement: Readonly<{ horizontalSpeed: number; descentPerTurn: number; startDirection: -1 | 1; moveEveryTicks: number }>;
   readonly attack: Readonly<{ shotsPerMinute: number; projectileSpeed: number }>;
 }
 export interface LevelPlan {

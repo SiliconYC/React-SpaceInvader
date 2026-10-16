@@ -32,7 +32,8 @@ test('只改 JSON 编队可更改敌机数量与位置，不改 TypeScript', () 
   assert.equal(game.snapshot().player.position.x, 18);
   game.dispatch({ type: 'START' });
   game.stepTicks(120);
-  assert.deepEqual(game.snapshot().enemies, firstWaveEnemies(variant)); // #5 不移动敌机
+  assert.notDeepEqual(game.snapshot().enemies, firstWaveEnemies(variant)); // #6 敌阵运动
+  assert.equal(game.snapshot().enemies.length, 18);
 });
 test('非法版本、字段、非有限数、超界、敌机类型和时序明确拒绝', () => {
   const cases = [
@@ -63,6 +64,7 @@ test('未来波次参数合法且静态演示只生成首波，二次重置复�
   game.dispatch({ type: 'START' });
   game.stepTicks(600);
   assert.equal(game.snapshot().enemies.length, 24);
+  assert.notDeepEqual(game.snapshot().enemies, firstWaveEnemies(level));
   game.dispatch({ type: 'RESET' });
   assert.equal(game.snapshot().enemies.length, 24);
   assert.deepEqual(game.snapshot().enemies, firstWaveEnemies(level));
