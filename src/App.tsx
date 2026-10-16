@@ -70,7 +70,7 @@ export default function App() {
         if (lastTime !== null) engine.advanceFrame(Math.min((time - lastTime) / 1000, 0.25));
         lastTime = time;
         keyboard.setEnabled(engine.snapshot().phase === 'running');
-        scene.consumeEvents(engine.drainEvents());
+        scene.consumeEvents(engine.drainEvents(),engine.snapshot());
         scene.render(engine.snapshot());
         if (time - lastUi >= 120) {
           setState(engine.snapshot());

@@ -3,6 +3,7 @@ import type { GameSnapshot, GameEvent } from '../core/engine.ts';
 import type { EnemyKind, EnemyState } from '../core/level.ts';
 import type { Point2, World2 } from '../core/world.ts';
 import { createShipTemplates } from './ShipModels.ts';
+import { CombatFX } from './CombatFX.ts';
 
 /** 世界坐标在二维，z 仅为渲染层深度，不参与任何游戏规则。 */
 export function toDisplayXY(point: Point2, world: World2): THREE.Vector3 {
@@ -24,9 +25,7 @@ export class BattlefieldRenderer {
   private readonly enemyBulletMaterial: THREE.MeshStandardMaterial;
   private readonly bulletGeometry: THREE.BufferGeometry;
   private readonly bulletMaterial: THREE.MeshStandardMaterial;
-  private readonly hitGeometry: THREE.BufferGeometry;
-  private readonly hitMaterial: THREE.MeshBasicMaterial;
-  private flashes: Array<{ mesh: THREE.Mesh; createdAt: number }> = [];
+  private readonly effects: CombatFX;
   private readonly observer: ResizeObserver;
 
   constructor(private readonly host: HTMLDivElement, snapshot: GameSnapshot) {
@@ -133,9 +132,8 @@ export class BattlefieldRenderer {
       color: 0xffb6a0, emissive: 0xef553f, emissiveIntensity: 1.25,
       metalness: 0.08, roughness: 0.3,
     });
-    this.hitGeometry = new THREE.IcosahedronGeometry(0.55, 1);
-    this.hitMaterial = new THREE.MeshBasicMaterial({ color: 0xffdb9b, transparent: true, opacity: 0.9 });
-    this.resources.push(this.bulletGeometry, this.bulletMaterial, this.enemyBulletMaterial, this.hitGeometry, this.hitMaterial);
+    this.resources.push(this.bulletGeometry, this.bulletMaterial, this.enemyBulletMaterial);
+    this.effects = new CombatFX(this.scene,this.world);
 
     // 模型类型可调整外观，但队列数量、坐标和种类只来自纯逻辑快照.
     this.syncEnemies(snapshot);
@@ -189,13 +187,10 @@ export class BattlefieldRenderer {
     this.host.dataset.lives = String(state.lives);
     this.host.dataset.gamePhase = state.phase;
     this.host.dataset.outcome = state.outcome ?? '';
-    const now = performance.now();
-    for (const flash of this.flashes) {
-      const age = (now - flash.createdAt) / 230;
-      flash.mesh.scale.setScalar(Math.max(0.04, 1 + age * 1.5));
-      if (age > 1) this.scene.remove(flash.mesh);
-    }
-    this.flashes = this.flashes.filter(flash => now - flash.createdAt <= 230);
+    this.effects.update(state.phase,this.camera);
+    this.host.dataset.fxActive = String(this.effects.active);
+    this.host.dataset.fxEmitted = String(this.effects.events);
+    this.host.dataset.fxKind = this.effects.kind;
     this.host.dataset.wave = String(state.currentWave);
     this.host.dataset.totalWaves = String(state.totalWaves);
     this.host.dataset.pendingWaves = String(state.pendingWaves);
@@ -204,16 +199,9 @@ export class BattlefieldRenderer {
     this.renderer.render(this.scene, this.camera);
   }
 
-  /** 事件只触发可抛弃的视觉特效，不改变分数或规则。 */
-  consumeEvents(events: readonly GameEvent[]): void {
-    for (const event of events) {
-      if (event.type !== 'enemy-hit') continue;
-      const spark = new THREE.Mesh(this.hitGeometry, this.hitMaterial);
-      spark.position.copy(toDisplayXY(event.position, this.world));
-      spark.position.z = 0.55;
-      this.scene.add(spark);
-      this.flashes.push({ mesh: spark, createdAt: performance.now() });
-    }
+  /** All feedback is initiated only by unique authoritative GameEvent records. */
+  consumeEvents(events: readonly GameEvent[],state?:GameSnapshot):void {
+    if(state)this.effects.consume(events,state);
   }
 
   private syncProjectiles(state: GameSnapshot): void {
@@ -299,7 +287,7 @@ export class BattlefieldRenderer {
     this.enemyMeshes.clear();
     this.projectileMeshes.clear();
     this.enemyProjectileMeshes.clear();
-    this.flashes.length = 0;
+    this.effects.dispose();
     for (const resource of this.resources) resource.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();

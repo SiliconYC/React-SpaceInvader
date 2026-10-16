@@ -29,5 +29,10 @@ jobs:
           path: |
             test-results/**/desktop-baseline.png
             test-results/**/narrow-baseline.png
+            test-results/**/fx-*.png
+            test-results/**/scout-models.png
+            test-results/**/raider-models.png
+            test-results/**/guardian-models.png
+            test-results/**/guardian-narrow-models.png
           retention-days: 7
           if-no-files-found: ignore
