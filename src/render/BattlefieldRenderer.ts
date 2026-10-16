@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { GameSnapshot } from '../core/engine.ts';
+import type { GameSnapshot, GameEvent } from '../core/engine.ts';
 import type { EnemyKind, EnemyState } from '../core/level.ts';
 import type { Point2, World2 } from '../core/world.ts';
 
@@ -17,6 +17,12 @@ export class BattlefieldRenderer {
   private readonly grid: THREE.LineSegments;
   private readonly playerMesh: THREE.Group;
   private readonly enemyMeshes = new Map<string, THREE.Mesh>();
+  private readonly projectileMeshes = new Map<number, THREE.Mesh>();
+  private readonly bulletGeometry: THREE.BufferGeometry;
+  private readonly bulletMaterial: THREE.MeshStandardMaterial;
+  private readonly hitGeometry: THREE.BufferGeometry;
+  private readonly hitMaterial: THREE.MeshBasicMaterial;
+  private flashes: Array<{ mesh: THREE.Mesh; createdAt: number }> = [];
   private readonly observer: ResizeObserver;
 
   constructor(private readonly host: HTMLDivElement, snapshot: GameSnapshot) {
@@ -124,7 +130,16 @@ export class BattlefieldRenderer {
     this.playerMesh.add(cockpit);
     this.scene.add(this.playerMesh);
 
-    // 模型类型可调整外观，但队列数量、坐标和种类只来自纯逻辑快照。
+    this.bulletGeometry = new THREE.CapsuleGeometry(0.10, 0.35, 4, 8);
+    this.bulletMaterial = new THREE.MeshStandardMaterial({
+      color: 0xd8f9ff, emissive: 0x51cfff, emissiveIntensity: 1.9,
+      metalness: 0.1, roughness: 0.2,
+    });
+    this.hitGeometry = new THREE.IcosahedronGeometry(0.55, 1);
+    this.hitMaterial = new THREE.MeshBasicMaterial({ color: 0xffdb9b, transparent: true, opacity: 0.9 });
+    this.resources.push(this.bulletGeometry, this.bulletMaterial, this.hitGeometry, this.hitMaterial);
+
+    // 模型类型可调整外观，但队列数量、坐标和种类只来自纯逻辑快照.
     this.syncEnemies(snapshot);
 
     this.host.dataset.worldWidth = String(this.world.width);
@@ -168,7 +183,49 @@ export class BattlefieldRenderer {
     this.host.dataset.playerX = state.player.position.x.toFixed(4);
     this.host.dataset.playerY = state.player.position.y.toFixed(4);
     this.syncEnemies(state);
+    this.syncProjectiles(state);
+    const now = performance.now();
+    for (const flash of this.flashes) {
+      const age = (now - flash.createdAt) / 230;
+      flash.mesh.scale.setScalar(Math.max(0.04, 1 + age * 1.5));
+      if (age > 1) this.scene.remove(flash.mesh);
+    }
+    this.flashes = this.flashes.filter(flash => now - flash.createdAt <= 230);
+    this.host.dataset.score = String(state.score);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** 事件只触发可抛弃的视觉特效，不改变分数或规则。 */
+  consumeEvents(events: readonly GameEvent[]): void {
+    for (const event of events) {
+      if (event.type !== 'enemy-hit') continue;
+      const spark = new THREE.Mesh(this.hitGeometry, this.hitMaterial);
+      spark.position.copy(toDisplayXY(event.position, this.world));
+      spark.position.z = 0.55;
+      this.scene.add(spark);
+      this.flashes.push({ mesh: spark, createdAt: performance.now() });
+    }
+  }
+
+  private syncProjectiles(state: GameSnapshot): void {
+    const ids = new Set(state.projectiles.map(projectile => projectile.id));
+    for (const [id, mesh] of this.projectileMeshes) {
+      if (!ids.has(id)) {
+        this.scene.remove(mesh);
+        this.projectileMeshes.delete(id);
+      }
+    }
+    for (const projectile of state.projectiles) {
+      let mesh = this.projectileMeshes.get(projectile.id);
+      if (!mesh) {
+        mesh = new THREE.Mesh(this.bulletGeometry, this.bulletMaterial);
+        this.scene.add(mesh);
+        this.projectileMeshes.set(projectile.id, mesh);
+      }
+      mesh.position.copy(toDisplayXY(projectile.position, this.world));
+      mesh.position.z = 0.48;
+    }
+    this.host.dataset.bulletCount = String(this.projectileMeshes.size);
   }
 
   /** 每帧读取逻辑快照，渲染器不计算位移/速度/折返。 */

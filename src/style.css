@@ -131,3 +131,15 @@ h1 { margin: 0; font-size: clamp(18px, 2vw, 24px); line-height: 1.2; font-weight
   background: rgba(46, 12, 26, .94); color: #ffccd5; padding: 18px 22px;
   border: 1px solid #9c4661; border-radius: 7px; line-height: 1.6; font-size: 14px;
 }
+
+.score-hud {
+  position: absolute; z-index: 2; left: 50%; top: clamp(16px, 2.7vw, 29px);
+  transform: translateX(-50%); color: #91adbb; font-size: 13px;
+  letter-spacing: .1em; pointer-events: none; white-space: nowrap;
+}
+.score-hud strong { margin-left: 9px; color: #f0f8fc; font-size: 18px; font-variant-numeric: tabular-nums; }
+@media(max-width: 650px) {
+  .score-hud { top: 65px; font-size: 11px; }
+  .score-hud strong { font-size: 14px; }
+  .control-hint { font-size: 10px; }
+}

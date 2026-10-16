@@ -1,6 +1,6 @@
 # 架构约定：二维玩法与三维表现（2.5D）
 
-> **状态：Issue #3–#6 已包含固定步进、玩家移动、静态关卡加载及二维集体敌阵运动。射击计分和后续玩法尚未实现。** 规则核心在 `src/core/`，场景在 `src/render/`；进度见 [P1 路线图](ROADMAP.md)。
+> **状态：Issue #3–#7 已包含固定步进、玩家移动、JSON 关卡、敌阵运动及玩家射击/二维扫掠碰撞/计分。敌人攻击和终局规则尚未实现。** 规则核心在 `src/core/`，场景在 `src/render/`；进度见 [P1 路线图](ROADMAP.md)。
 
 ## 目标及不可变边界
 
@@ -53,3 +53,7 @@ Issue #5 已证实仅修改 `public/levels/first-contact.json` 的 `formation` �
 ## #6 编队运动
 
 `src/core/formation.ts` 由二维敌机包围盒计算下一次位移，水平到边缘就反射剩余路程、整体下压；高速及长间隔也不穿过边界。仅 `GameEngine.stepTicks` 推进逻辑；`Three.js` 每帧从快照同步坐标，不参与判定。关卡每波 `movement` v1 要求 `horizontalSpeed`、`descentPerTurn`、`startDirection`、`moveEveryTicks`；当前只执行第一波。最低边界处停止进一步下压，生命/失败判定留给 #8。
+
+## #7 玩家射击、事件与计分
+
+纯 TypeScript `src/core/combat.ts` 实现**运动目标相对坐标扫掠 AABB**（同时计算弹道 y 位移与敌阵 x/y 变化），不依赖 Three.js 模型/碰撞。`GameEngine` 接受 `FIRE`（立即请求）及 `SET_FIRING(active)`（空格长按），只在运行态有效；每 12 tick 最多一发，使用 60Hz 固定步进；玩家弹道 x 固定、y 向上，超出战场清理。先命中的目标被一次性销毁，按 scout=10/raider=20/guardian=30 加分，发布 `enemy-hit` 事件，禁止同目标重复计分。Three.js 只据快照画弹体及消费事件生成短暂光效；React 只显示极简分数 HUD。重置清空射弹、计分、冷却与输入状态；暂停停止射弹与敌阵。敌方伤害和胜负（#8）不在本轮。

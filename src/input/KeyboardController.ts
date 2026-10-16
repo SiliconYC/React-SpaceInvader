@@ -6,6 +6,7 @@ export class KeyboardController {
   private readonly held = new Set<'left' | 'right'>();
   private enabled = false;
   private lastDirection: -1 | 0 | 1 = 0;
+  private heldFire = false;
 
   constructor(private readonly send: CommandSink) {
     window.addEventListener('keydown', this.keydown);
@@ -39,6 +40,14 @@ export class KeyboardController {
   }
   private keydown = (event: KeyboardEvent): void => {
     if (!this.enabled || event.ctrlKey || event.altKey || event.metaKey || event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+    if (event.code === 'Space' || event.key === ' ') {
+      event.preventDefault(); // 阻止 Space 意外再次触发已获焦点的「开始/暂停」按钮
+      if (!event.repeat && !this.heldFire) {
+        this.heldFire = true;
+        this.send({ type: 'SET_FIRING', active: true });
+      }
+      return;
+    }
     const direction = this.mapKey(event.key);
     if (!direction) return;
     event.preventDefault();
@@ -48,6 +57,14 @@ export class KeyboardController {
     }
   };
   private keyup = (event: KeyboardEvent): void => {
+    if (event.code === 'Space' || event.key === ' ') {
+      if (this.enabled) event.preventDefault();
+      if (this.heldFire) {
+        this.heldFire = false;
+        if (this.enabled) this.send({ type: 'SET_FIRING', active: false });
+      }
+      return;
+    }
     const direction = this.mapKey(event.key);
     if (!direction) return;
     if (this.enabled) event.preventDefault();
@@ -56,6 +73,8 @@ export class KeyboardController {
   };
   private releaseAll = (): void => {
     this.held.clear();
+    if (this.heldFire && this.enabled) this.send({ type: 'SET_FIRING', active: false });
+    this.heldFire = false;
     if (this.enabled && this.lastDirection !== 0) this.send({ type: 'SET_MOVEMENT', direction: 0 });
     this.lastDirection = 0;
   };
