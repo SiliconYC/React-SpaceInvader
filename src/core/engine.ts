@@ -296,7 +296,6 @@ export class GameEngine {
     this.nextEnemyShotTick = this.enemyShotInterval === null ? null : this.tick + this.enemyShotInterval;
     this.projectiles = Object.freeze([]);
     this.enemyProjectiles = Object.freeze([]);
-    this.firing = false; // 避免按住空格跨波产生自动击杀；需重新按下
     this.events.push({ type: 'wave-started', tick: this.tick, wave: nextIndex + 1,
       total: this.levelPlan.waves.length, waveId: next.id });
   }
