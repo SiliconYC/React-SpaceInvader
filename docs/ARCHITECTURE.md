@@ -71,3 +71,7 @@ Issue #5 已证实仅修改 `public/levels/first-contact.json` 的 `formation` �
 ## P2 #21 模型与资源基线
 
 `src/render/ShipModels.ts` 一次性创建玩家机、轻型 scout、双舱 raider、装甲 guardian 四种结构不同的原创 3D 模型原型。通过 `Group.clone(true)` 实例化敌机，所有同型号实例 **共享 BufferGeometry/Material**，不在每次出现/每帧分别分配，死亡从 scene 移除；切关调用 renderer.dispose 统一释放会话级纹理/几何/材质。程序生成稀疏低亮尘点和补光；正交相机保证 `(x,y)` 瞄准、边界与此前完全一致，三维轮廓绝不参与碰撞。模型截图与 GPU 资产计数由 `tests/models.browser.spec.ts` 捕获；逻辑玩法没有修改。
+
+## P2 #22 轻量战斗视觉反馈
+
+`src/render/CombatFX.ts` 只消费 `GameEvent` 和只读快照：开火小闪、敌机击毁碎片、玩家受击闪光、波次启动短促低强度环形脉冲、胜败淡化光圈；不增音乐、不产生任何命中规则。每次效果由完整事件标识去重（最多记录最近 512 条），全局同时活动实例上限 72，所有粒子共享预先分配的两套几何和五种材质，没有音视频定时器、渲染器外 RAF 或每帧新建 GPU 资产。视觉寿命最高 800ms；暂停和重置清空特效，切关/卸载自动 `dispose()`。降低动态效果选项 `prefers-reduced-motion` 限制粒子。仅波次切换时正交相机最多 1.2%/550ms 的轻脉冲，战斗过程保持完全静止。浏览器实拍快照及数据属性（fx active/emitted/kind/gpu assets）对生命周期进行回归；逻辑 seed/tick/collision/score 完全由原 `GameEngine` 维护。
