@@ -73,6 +73,8 @@ test('两关独立保存胜负；未完成重置不得伪造结算',async({page}
   await expect(page.getByTestId('score-list').locator('li')).toHaveCount(1);
   await expect(page.getByTestId('score-list')).toContainText('失败');
   await page.getByTestId('level-select').selectOption('first-contact');
+  await expect(page.getByTestId('level-name')).toHaveText('第一关 · 初次接触');
+  await page.getByRole('button',{name:'成绩'}).click();
   await expect(page.getByTestId('score-list').locator('li')).toHaveCount(1);
   await expect(page.getByTestId('score-list')).toContainText('通关');
 });
