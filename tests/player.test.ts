@@ -1,0 +1,61 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { GameEngine, PLAYER_WIDTH } from '../src/core/engine.ts';
+
+test('移动前必须启动，且只能输入 -1/0/+1', () => {
+  const game = new GameEngine();
+  const before = game.snapshot();
+  assert.equal(game.dispatch({ type: 'SET_MOVEMENT', direction: -1 }).accepted, false);
+  assert.deepEqual(game.snapshot(), before);
+  game.dispatch({ type: 'START' });
+  assert.equal(game.dispatch({ type: 'SET_MOVEMENT', direction: 2 as 1 }).accepted, false);
+  assert.deepEqual(game.snapshot().player, before.player);
+});
+test('左右移动仅改变 x，松开立即停止；两键抵消由输入层生成 0', () => {
+  const game = new GameEngine();
+  game.dispatch({ type: 'START' });
+  const y = game.snapshot().player.position.y;
+  const x = game.snapshot().player.position.x;
+  game.dispatch({ type: 'SET_MOVEMENT', direction: -1 });
+  game.stepTicks(60);
+  assert.ok(Math.abs(game.snapshot().player.position.x - (x - 12)) < 1e-8);
+  assert.equal(game.snapshot().player.position.y, y);
+  game.dispatch({ type: 'SET_MOVEMENT', direction: 0 });
+  game.stepTicks(60);
+  assert.ok(Math.abs(game.snapshot().player.position.x - (x - 12)) < 1e-8);
+  game.dispatch({ type: 'SET_MOVEMENT', direction: 1 });
+  game.stepTicks(60);
+  assert.ok(Math.abs(game.snapshot().player.position.x - x) < 1e-8);
+});
+test('飞船左右边界约束，暂停、结束、重置不残留持续位移', () => {
+  const game = new GameEngine(16);
+  game.dispatch({ type: 'START' });
+  game.dispatch({ type: 'SET_MOVEMENT', direction: -1 });
+  game.stepTicks(900);
+  assert.equal(game.snapshot().player.position.x, PLAYER_WIDTH / 2);
+  game.dispatch({ type: 'SET_MOVEMENT', direction: 1 });
+  game.stepTicks(900);
+  assert.equal(game.snapshot().player.position.x, game.snapshot().world.width - PLAYER_WIDTH / 2);
+  game.dispatch({ type: 'PAUSE' });
+  const before = game.snapshot();
+  game.stepTicks(60);
+  assert.deepEqual(game.snapshot(), before);
+  game.dispatch({ type: 'RESUME' });
+  game.stepTicks(60);
+  assert.deepEqual(game.snapshot().player, before.player);
+  game.dispatch({ type: 'END' });
+  assert.equal(game.dispatch({ type: 'SET_MOVEMENT', direction: -1 }).accepted, false);
+  game.dispatch({ type: 'RESET' });
+  assert.equal(game.snapshot().player.position.x, 18);
+});
+test('60/24 Hz 渲染帧率得到同样二维轨迹，快照不可修改', () => {
+  const a = new GameEngine(99);
+  const b = new GameEngine(99);
+  a.dispatch({ type: 'START' }); b.dispatch({ type: 'START' });
+  a.dispatch({ type: 'SET_MOVEMENT', direction: 1 });
+  b.dispatch({ type: 'SET_MOVEMENT', direction: 1 });
+  for (let i = 0; i < 60; i++) a.advanceFrame(1 / 60);
+  for (let i = 0; i < 24; i++) b.advanceFrame(1 / 24);
+  assert.deepEqual(a.snapshot(), b.snapshot());
+  assert.equal(Object.isFrozen(a.snapshot().player.position), true);
+});
