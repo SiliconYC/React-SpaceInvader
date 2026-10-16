@@ -16,7 +16,7 @@ test('仓库示例 JSON 合法；同数据同种子静态编队完全一致', ()
   assert.equal(a.snapshot().enemies.length, 24);
   assert.equal(a.snapshot().enemies[0].position.x, 6.5);
   assert.equal(a.snapshot().enemies[0].position.y, 19.2);
-  assert.equal(a.snapshot().enemies.at(-1)?.position.x, 28.9);
+  assert.ok(Math.abs((a.snapshot().enemies.at(-1)?.position.x ?? 0) - 28.9) < 1e-9);
   assert.equal(a.snapshot().enemies.at(-1)?.position.y, 13.6);
   assert.deepEqual(firstWaveEnemies(level), a.snapshot().enemies);
   assert.equal(Object.isFrozen(a.snapshot().enemies), true);

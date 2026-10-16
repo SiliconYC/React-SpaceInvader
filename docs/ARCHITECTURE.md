@@ -1,6 +1,6 @@
 # 架构约定：二维玩法与三维表现（2.5D）
 
-> **状态：Issue #3–#4 基础核心和飞船移动已实现；敌阵、射击及后续玩法尚未实现。** 规则核心在 `src/core/`，场景在 `src/render/`；进度见 [P1 路线图](ROADMAP.md)。
+> **状态：Issue #3–#5 基础核心、飞船移动与 JSON 静态敌阵已实现；敌机移动、射击及后续玩法尚未实现。** 规则核心在 `src/core/`，场景在 `src/render/`；进度见 [P1 路线图](ROADMAP.md)。
 
 ## 目标及不可变边界
 
@@ -33,9 +33,9 @@
 - `difficulty`：允许的数据化速度/射击频率等难度参数，避免仅靠硬编码。
 - `victory`：当所有应生成波次和存活敌人完成时的胜利判定等，可验证的有限配置。
 
-以上为字段职责，**最终类型、单位、数值约束及版本迁移规则须在 Issue #5 编码时锁定**；不要提前声称 JSON 契约已经实现。严格拒绝不支持版本、缺失字段、NaN/越界参数、未知敌机类型、无效时序、错误资源引用和超出限制的数据。错误须具备可诊断的简体中文提示，不能悄悄退回硬编码关卡。
+上述职责已由 #5 在 `src/levels/parse.ts` 的 v1 严格校验器及 `src/core/level.ts` 的不可变纯 TS 类型中落地：编队是 `type/rows/columns/startX/startY/spacingX/spacingY`，每波还有 `spawnAtSeconds`、`movement.horizontalSpeed/descentPerTurn`、`attack.shotsPerMinute/projectileSpeed`；难度为 `speedMultiplier/fireRateMultiplier`。版本仅接受 1，未来版本需显式迁移。严格拒绝不支持版本、缺失字段、NaN/越界参数、未知敌机类型、无效时序、错误资源引用和超出限制的数据。错误须具备可诊断的简体中文提示，不能悄悄退回硬编码关卡。
 
-P1 验收需证实修改 `public/levels/*.json` 即可改变阵形、速度、攻击参数、波次或难度，无需修改规则与渲染代码；随机行为提供种子重放。
+Issue #5 已证实仅修改 `public/levels/first-contact.json` 的 `formation` 可改变静态编队数量、位置和类型；运动/射击/多波次的配置字段先校验和保留，不在 #5 执行，分别留给后续 Issue。解析失败时展示中文错误，不注入默认敌阵；加载使用 Vite `BASE_URL`。
 
 ## 测试与持续部署
 
