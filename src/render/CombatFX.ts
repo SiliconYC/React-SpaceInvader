@@ -26,6 +26,7 @@ export class CombatFX {
   private wavePulseUntil = 0;
   private readonly reduceMotion: boolean;
   private emitted = 0;
+  private armorEmitted = 0;
   private lastKinds = '';
 
   constructor(private readonly scene: THREE.Scene, private readonly world: World2) {
@@ -69,6 +70,7 @@ export class CombatFX {
       });
     }
     this.emitted++;
+    if(kind==='armor')this.armorEmitted++;
     this.lastKinds=kind;
   }
 
@@ -76,7 +78,7 @@ export class CombatFX {
     for(const event of events){
       if(event.type==='game-reset'){
         this.clear();
-        this.seen.clear();this.keys.length=0;this.emitted=0;
+        this.seen.clear();this.keys.length=0;this.emitted=0;this.armorEmitted=0;
         continue;
       }
       if(event.type==='phase-changed'&&event.to==='paused'){
@@ -131,6 +133,7 @@ export class CombatFX {
     if(Math.abs(camera.zoom-target)>1e-7){camera.zoom=target;camera.updateProjectionMatrix();}
   }
   get active():number{return this.pool.length;}
+  get armorEvents():number{return this.armorEmitted;}
   get events():number{return this.emitted;}
   get kind():string{return this.lastKinds;}
   clear():void{

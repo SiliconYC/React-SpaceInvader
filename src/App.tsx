@@ -100,6 +100,7 @@ export default function App() {
         keyboard.setEnabled(canRun&&engine.snapshot().phase==='running');
         touch.setEnabled(canRun&&engine.snapshot().phase==='running');
         host.dataset.touchHeld=String(touch.activeCount);
+        host.dataset.touchActions=touch.activeActions;
         const snapshot = engine.snapshot();
         const events = engine.drainEvents();
         audioRef.current?.setPhase(snapshot.phase);

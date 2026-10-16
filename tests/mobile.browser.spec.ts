@@ -54,14 +54,21 @@ test.describe('模拟真实移动设备触控',()=>{
     const pos=(b:NonNullable<typeof left>,id:number)=>({id,x:b.x+b.width/2,y:b.y+b.height/2});
     const leftPoint=pos(left!,1),firePoint=pos(fire!,2);
     const client=await page.context().newCDPSession(page);
+    await page.getByTestId('touch-left').evaluate(el=>el.addEventListener('pointerdown',e=>{
+      (window as unknown as {__leftId:number}).__leftId=(e as PointerEvent).pointerId;
+    },{once:true}));
     const startX=Number(await stage.getAttribute('data-player-x'));
     await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[leftPoint]});
     await expect.poll(async()=>Number(await stage.getAttribute('data-player-x'))).toBeLessThan(startX-.6);
     await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[leftPoint,firePoint]});
     await expect.poll(async()=>Number(await stage.getAttribute('data-touch-held'))).toBe(2);
     await expect.poll(async()=>Number(await stage.getAttribute('data-bullet-count')),{timeout:7000}).toBeGreaterThan(0);
-    await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[firePoint]});
+    // Chrome CDP touchEnd with multiple active touches cannot reliably identify which
+    // finger was lifted on all emulation versions. Dispatch an exact left pointerup.
+    const leftPointerId=await page.evaluate(()=>(window as unknown as {__leftId:number}).__leftId);
+    await page.getByTestId('touch-left').dispatchEvent('pointerup',{pointerId:leftPointerId,pointerType:'touch'});
     await expect(stage).toHaveAttribute('data-touch-held','1');
+    await expect(stage).toHaveAttribute('data-touch-actions','fire');
     const stopped=Number(await stage.getAttribute('data-player-x'));
     await page.waitForTimeout(200);
     expect(Math.abs(Number(await stage.getAttribute('data-player-x'))-stopped)).toBeLessThan(.5);

@@ -211,6 +211,7 @@ export class BattlefieldRenderer {
     this.effects.update(state.phase,this.camera);
     this.host.dataset.fxActive = String(this.effects.active);
     this.host.dataset.fxEmitted = String(this.effects.events);
+    this.host.dataset.fxArmorEvents=String(this.effects.armorEvents);
     this.host.dataset.fxKind = this.effects.kind;
     this.host.dataset.wave = String(state.currentWave);
     this.host.dataset.totalWaves = String(state.totalWaves);

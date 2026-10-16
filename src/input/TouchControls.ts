@@ -48,5 +48,6 @@ export class TouchControls {
     this.lastDirection=0;this.fired=false;
   }
   get activeCount():number{return this.held.size;}
+  get activeActions():string{return [...this.held.values()].join(',');}
   dispose():void{this.releaseAll();this.enabled=false;}
 }
