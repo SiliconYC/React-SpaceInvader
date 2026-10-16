@@ -60,7 +60,8 @@ export class GameAudio {
   private readonly recent: string[] = [];
   private played = 0;
   private available = typeof window !== 'undefined' && typeof window.AudioContext === 'function';
-  constructor(private prefs: AudioPrefs = readAudioPrefs()) {}
+  private prefs: AudioPrefs;
+  constructor(prefs: AudioPrefs = readAudioPrefs()) { this.prefs = prefs; }
   get status(): 'locked' | 'unavailable' | 'ready' {
     return !this.available ? 'unavailable' : this.armed ? 'ready' : 'locked';
   }
