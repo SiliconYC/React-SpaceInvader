@@ -32,6 +32,12 @@ function label(v: unknown, path: string, max: number): string {
 
 /** 严格拒绝非法/未知字段与非法数值，不进行静默默认填充。 */
 export function parseLevel(input: unknown): LevelPlan {
+  // 首先报告不兼容版本，不能被其他字段缺失的次生错误遮蔽。
+  if (input !== null && typeof input === 'object' && !Array.isArray(input) &&
+      Object.prototype.hasOwnProperty.call(input, 'schemaVersion') &&
+      (input as Record<string, unknown>).schemaVersion !== 1) {
+    throw new LevelValidationError('不支持的 schemaVersion');
+  }
   const root = obj(input, '关卡', ['schemaVersion', 'id', 'metadata', 'world', 'waves', 'difficulty', 'victory']);
   if (root.schemaVersion !== 1) throw new LevelValidationError('不支持的 schemaVersion');
   const metadata = obj(root.metadata, 'metadata', ['name', 'description']);
