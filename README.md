@@ -1,27 +1,28 @@
 # 侵略者仓库（React-SpaceInvader）
 
-基于 **React + TypeScript + Three.js** 的 3D《太空侵略者》项目。目标是在浏览器中运行完整游戏，并通过外部关卡数据驱动敌人编队、波次、难度和胜负条件。
+基于 **React + TypeScript + Three.js + Vite** 的浏览器游戏：用立体模型呈现经典二维《太空侵略者》，而不引入三维飞行操作。
 
-> **当前阶段：工程初始化。** 首页仅是 React 与 Three.js / WebGL 联通测试，不是游戏，更没有实现玩法或关卡。
+> **当前状态：** React / Three.js 联通测试已建立，**游戏功能尚未实现**；第一阶段 Issue #3–#9 已创建，见 [P1 路线图](docs/ROADMAP.md)。
 
-## 运行与发布
+## 核心设计（2.5D）
 
-- 开发分支、PR 合并目标、Pages 部署来源：`dev`。
-- 在线地址：<https://siliconyc.github.io/React-SpaceInvader/> （只有 Actions 首次部署成功后才可用）。
-- Pages 设置：**Source = GitHub Actions**，不是 `gh-pages` 分支。
-- 每次合并到 `dev` 自动构建和部署；PR 只执行验证，不发布。
-- Vite 项目页基础路径固定为 `/React-SpaceInvader/`，所有页面资源必须兼容此子路径。
+- **玩法二维化：** 玩家只左右移动和射击；敌机编队横移、折返、下降并开火；玩家、敌人、子弹的逻辑位置、运动和碰撞均位于同一 `(x,y)` 战斗平面。
+- **画面三维化：** Three.js 绘制立体飞船、敌机、光影、特效与过场镜头，**不参与规则判定**；作战镜头以稳定、清晰为主。
+- **关卡数据化：** 独立 JSON 配置决定敌机编队、波次、速度、射击频率和胜负条件；数据须先校验。游戏核心独立于 React/Three.js，可用固定种子无界面测试。
+- 无登录/后端/云存档，不从外部 CDN 加载必需运行时代码，使用原创素材；玩家界面简体中文。
 
-本地要求 Node.js 22。执行 `npm install`、`npm run dev` 启动开发服务器；执行 `npm run verify` 完成类型检查、生产构建与静态资源冒烟检查。首轮先锁定直接依赖版本；后续开发须补交 npm 锁文件并改为 `npm ci`，以锁定完整依赖树。
+## 运行与部署
 
-## 技术与结构
+- 默认开发/PR 合并分支：`dev`（不改 `main`）。
+- [在线 Pages](https://siliconyc.github.io/React-SpaceInvader/)：GitHub Pages 的 **Source = GitHub Actions**，合并 `dev` 后自动构建发布。地址基础路径 `/React-SpaceInvader/`。
+- Node.js 22。当前本地命令：`npm install`、`npm run dev`、`npm run verify`（类型检查、Vite 生产构建、静态资源冒烟）。
+- [Issue #3](https://github.com/SiliconYC/React-SpaceInvader/issues/3) 须补齐锁文件和 `npm ci` 可复现安装；此项尚未实现，不得声称依赖已经完全锁定。
+- Pages 成功发布不等同实际浏览器可玩验收；各个功能 Issue 应提供实际交互与逻辑测试证据。
 
-- React 负责界面与生命周期；Three.js 负责三维渲染，不把游戏规则写进 React 组件。
-- Vite 负责开发与构建；所有代码与依赖打包为站点同源静态资源，不从外部 CDN 载入运行时。
-- 游戏规则、输入、碰撞、计分和关卡读取以后拆分为可独立测试的模块。
-- 关卡采用带版本号的数据文件，目录规划为 `public/levels/`；数据经校验后由游戏核心读取，界面与渲染器只消费结果。详见 [架构及关卡规范](docs/ARCHITECTURE.md)。
-- 不要求后端、玩家账号或服务器数据库；GitHub Pages 仅提供静态文件。
+## 开发规范与文档
 
-## 开发约定
+- [AGENTS.md](AGENTS.md)：AI 开发规则、2.5D 硬约束、独立分支与 PR、CI 精简和验收。
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)：二维逻辑与三维渲染隔离、数据驱动关卡、测试及发布。
+- [docs/ROADMAP.md](docs/ROADMAP.md)：P1 七项 Issue、依赖顺序、最小完整可玩闭环。
 
-先阅读 [AGENTS.md](AGENTS.md)。原则上每项 Issue 从 `dev` 建立临时分支、细粒度提交、必要测试通过后经 PR 合并到 `dev`。每次合并都应能访问 Pages 检查真实画面；严禁把仅通过构建视为已经通过浏览器验收。
+每个 Issue 从 `dev` 建立独立短期分支，细粒度 Commit/Push，独立 PR 合并后部署 GitHub Pages，再验收增量。**当前仅更新规划文档，不实现游戏功能。**
