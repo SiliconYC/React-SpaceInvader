@@ -46,7 +46,7 @@ test('浏览器实玩受袭失败：可见敌弹、生命递减、失败、重�
     const level = await response.json();
     Object.assign(level.waves[0].formation, { rows: 1, columns: 1, startX: 18, startY: 10 });
     level.waves[0].movement.horizontalSpeed = 0;
-    Object.assign(level.waves[0].attack, { shotsPerMinute: 240, projectileSpeed: 60 });
+    Object.assign(level.waves[0].attack, { shotsPerMinute: 240, projectileSpeed: 12 });
     await route.fulfill({ response, json: level });
   });
   const stageError: string[] = [];
