@@ -121,3 +121,41 @@ test('游戏飞船始终受二维边界约束，页面包含实际三维模型',
   expect(x).toBeGreaterThan(18);
   expect(x).toBeLessThanOrEqual(36 - 1.25);
 });
+
+test('真实关卡 JSON 加载并渲染 24 架静态敌机，且不会随时间自行移动', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto('./');
+  await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
+  await expect(page.getByTestId('level-name')).toHaveText('第一关 · 初次接触');
+  const stage = page.getByTestId('battlefield');
+  await expect(stage).toHaveAttribute('data-enemy-count', '24');
+  await page.getByRole('button', { name: '开始', exact: true }).click();
+  await page.waitForTimeout(260);
+  await expect(stage).toHaveAttribute('data-enemy-count', '24');
+  expect(errors).toEqual([]);
+});
+
+test('改变下载的 JSON 阵列不修改 TypeScript，渲染数量随之变化', async ({ page }) => {
+  await page.route('**/levels/first-contact.json', async route => {
+    const original = await route.fetch();
+    const level = await original.json();
+    level.waves[0].formation.columns = 5;
+    level.metadata.name = '临时阵列测试';
+    await route.fulfill({ response: original, json: level });
+  });
+  await page.goto('./');
+  await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
+  await expect(page.getByTestId('level-name')).toHaveText('临时阵列测试');
+  await expect(page.getByTestId('battlefield')).toHaveAttribute('data-enemy-count', '15');
+});
+
+test('无效关卡拒绝渲染且明确显示中文错误，不静默回退', async ({ page }) => {
+  await page.route('**/levels/first-contact.json', route =>
+    route.fulfill({ contentType: 'application/json', body: JSON.stringify({ schemaVersion: 999 }) }));
+  await page.goto('./');
+  await expect(page.getByTestId('level-error')).toContainText('关卡数据无效');
+  await expect(page.getByTestId('level-error')).toContainText('schemaVersion');
+  await expect(page.getByRole('button', { name: '开始', exact: true })).toHaveCount(0);
+  await expect(page.getByTestId('battlefield').locator('canvas')).toHaveCount(0);
+});

@@ -2,7 +2,7 @@
 
 基于 **React + TypeScript + Three.js + Vite** 的浏览器游戏：用立体模型呈现经典二维《太空侵略者》，而不引入三维飞行操作。
 
-> **当前状态：** Issue #3–#4 已建立二维核心、三维战场及键盘左右移动的玩家飞船；敌机、射击、关卡尚未实现。下一步 Issue #5。见 [P1 路线图](docs/ROADMAP.md)。
+> **当前状态：** Issue #3–#5 已建立二维核心、可控三维飞船、严格 JSON 关卡解析与静态三维敌机编队；敌机尚不移动或射击。下一步 Issue #6。见 [P1 路线图](docs/ROADMAP.md)。
 
 ## 核心设计（2.5D）
 
@@ -16,6 +16,10 @@
 ## 视觉风格
 
 默认沉浸式宽屏战场、大画布、极少 HUD、无常驻网格或技术指标；调试模式才显示网格和逻辑状态。设计约束见 [AGENTS.md](AGENTS.md)。
+
+## 关卡数据（v1）
+
+示例：`public/levels/first-contact.json`。只需改 JSON 中 `waves[0].formation` 的行列、起点或间距，重建部署即可改变敌阵，无需修改 TypeScript。严格验证字段：`schemaVersion=1`、`id`、`metadata`、`world`、`waves`、`difficulty`、`victory`。每波包含 `spawnAtSeconds`、`formation`（type、rows、columns、startX、startY、spacingX、spacingY）、`movement` 与 `attack`；所有数字须为有限且合法范围，禁止越界或未知敌机类型。**#5 只显示第 0 秒的首波静态敌阵；其他波次及运动由后续 Issue 实现。** 若配置无效，界面直接显示中文报错，绝不静默回退硬编码阵型。
 
 ## 运行与部署
 

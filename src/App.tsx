@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GameEngine, type GameCommand, type GameSnapshot } from './core/engine.ts';
 import { BattlefieldRenderer } from './render/BattlefieldRenderer.ts';
 import { KeyboardController } from './input/KeyboardController.ts';
+import { loadLevel } from './levels/load.ts';
 
 const GAME_SEED = 20261017;
 const LABELS: Record<GameSnapshot['phase'], string> = {
@@ -14,53 +15,65 @@ export default function App() {
   const rendererRef = useRef<BattlefieldRenderer | null>(null);
   const keyboardRef = useRef<KeyboardController | null>(null);
   const [webgl, setWebgl] = useState<'ready' | 'error' | 'loading'>('loading');
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [levelName, setLevelName] = useState('关卡加载中');
   const [debug, setDebug] = useState(() => new URLSearchParams(window.location.search).has('debug'));
   const [state, setState] = useState<GameSnapshot>(() => new GameEngine(GAME_SEED).snapshot());
 
   useEffect(() => {
     const host = viewportRef.current;
     if (!host) return;
-    const engine = new GameEngine(GAME_SEED);
-    engineRef.current = engine;
-    let scene: BattlefieldRenderer;
-    try {
-      scene = new BattlefieldRenderer(host, engine.snapshot());
-    } catch (error) {
-      console.error('Three.js 初始化失败', error);
-      setWebgl('error');
-      engineRef.current = null;
-      return;
-    }
-    rendererRef.current = scene;
-    scene.setDebugVisible(new URLSearchParams(window.location.search).has('debug'));
-    setWebgl('ready');
-    const keyboard = new KeyboardController(command => { engine.dispatch(command); });
-    keyboardRef.current = keyboard;
+    const abort = new AbortController();
+    let disposed = false;
     let raf = 0;
     let lastTime: number | null = null;
     let lastUi = 0;
-    const animate = (time: number) => {
-      if (lastTime !== null) engine.advanceFrame(Math.min((time - lastTime) / 1000, 0.25));
-      lastTime = time;
-      keyboard.setEnabled(engine.snapshot().phase === 'running');
-      scene.render(engine.snapshot());
-      if (time - lastUi > 120) {
-        setState(engine.snapshot());
-        lastUi = time;
-      }
+    let scene: BattlefieldRenderer | null = null;
+    let keyboard: KeyboardController | null = null;
+
+    // 缺失或无效关卡必须明确报错，不回退到硬编码敌阵。
+    void loadLevel('first-contact', abort.signal).then(level => {
+      if (disposed) return;
+      const engine = new GameEngine(GAME_SEED, level.world, level);
+      scene = new BattlefieldRenderer(host, engine.snapshot());
+      engineRef.current = engine;
+      rendererRef.current = scene;
+      scene.setDebugVisible(new URLSearchParams(window.location.search).has('debug'));
+      keyboard = new KeyboardController(command => { engine.dispatch(command); });
+      keyboardRef.current = keyboard;
+      setLevelName(level.metadata.name);
+      setState(engine.snapshot());
+      setWebgl('ready');
+
+      const animate = (time: number) => {
+        if (lastTime !== null) engine.advanceFrame(Math.min((time - lastTime) / 1000, 0.25));
+        lastTime = time;
+        keyboard?.setEnabled(engine.snapshot().phase === 'running');
+        scene?.render(engine.snapshot());
+        if (time - lastUi > 120) {
+          setState(engine.snapshot());
+          lastUi = time;
+        }
+        raf = requestAnimationFrame(animate);
+      };
       raf = requestAnimationFrame(animate);
-    };
+    }).catch(error => {
+      if (disposed || abort.signal.aborted) return;
+      setLoadError(error instanceof Error ? error.message : '关卡加载失败：未知错误');
+    });
+
     const onVisibility = () => { lastTime = null; };
     document.addEventListener('visibilitychange', onVisibility);
-    raf = requestAnimationFrame(animate);
     return () => {
+      disposed = true;
+      abort.abort();
       cancelAnimationFrame(raf);
       document.removeEventListener('visibilitychange', onVisibility);
       engineRef.current = null;
       rendererRef.current = null;
-      keyboard.dispose();
+      keyboard?.dispose();
       keyboardRef.current = null;
-      scene.dispose();
+      scene?.dispose();
     };
   }, []);
 
@@ -86,15 +99,16 @@ export default function App() {
       <header className="game-header">
         <div className="brand">
           <h1>侵略者</h1>
-          <span className="preview-label">战场预览</span>
+          <span className="preview-label" data-testid="level-name">{levelName}</span>
         </div>
         <button className="debug-toggle" type="button" aria-pressed={debug}
           onClick={() => setDebug(value => !value)}>{debug ? '关闭调试' : '调试'}</button>
       </header>
 
+      {loadError && <div role="alert" data-testid="level-error" className="level-error">{loadError}</div>}
       <div className="control-hint">← → / A D <span>左右移动</span></div>
       <div className="play-actions" aria-label="引擎操作">
-        {state.phase === 'ready' && <button type="button" onClick={() => send({ type: 'START' })}>开始</button>}
+        {!loadError && webgl === 'ready' && state.phase === 'ready' && <button type="button" onClick={() => send({ type: 'START' })}>开始</button>}
         {state.phase === 'running' && <button type="button" onClick={() => send({ type: 'PAUSE' })}>暂停</button>}
         {state.phase === 'paused' && <button type="button" onClick={() => send({ type: 'RESUME' })}>继续</button>}
         {state.phase === 'ended' && <button type="button" onClick={() => { send({ type: 'RESET' }); send({ type: 'START' }); }}>重新开始</button>}

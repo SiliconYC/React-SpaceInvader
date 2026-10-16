@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { GameSnapshot } from '../core/engine.ts';
+import type { EnemyKind, EnemyState } from '../core/level.ts';
 import type { Point2, World2 } from '../core/world.ts';
 
 /** 世界坐标在二维，z 仅为渲染层深度，不参与任何游戏规则。 */
@@ -15,6 +16,7 @@ export class BattlefieldRenderer {
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
   private readonly grid: THREE.LineSegments;
   private readonly playerMesh: THREE.Group;
+  private readonly enemyMeshes = new Map<string, THREE.Mesh>();
   private readonly observer: ResizeObserver;
 
   constructor(private readonly host: HTMLDivElement, snapshot: GameSnapshot) {
@@ -122,6 +124,9 @@ export class BattlefieldRenderer {
     this.playerMesh.add(cockpit);
     this.scene.add(this.playerMesh);
 
+    // 模型类型可调整外观，但队列数量、坐标和种类只来自纯逻辑快照。
+    this.syncEnemies(snapshot);
+
     this.host.dataset.worldWidth = String(this.world.width);
     this.host.dataset.worldHeight = String(this.world.height);
     this.host.dataset.debugGrid = 'off';
@@ -162,7 +167,71 @@ export class BattlefieldRenderer {
     this.playerMesh.position.copy(point);
     this.host.dataset.playerX = state.player.position.x.toFixed(4);
     this.host.dataset.playerY = state.player.position.y.toFixed(4);
+    this.syncEnemies(state);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** 静态敌阵在本阶段不移动；未来运动阶段也只从 state 同步坐标。 */
+  private syncEnemies(state: GameSnapshot): void {
+    const active = new Set(state.enemies.map(enemy => enemy.id));
+    for (const [id, mesh] of this.enemyMeshes) {
+      if (!active.has(id)) {
+        this.scene.remove(mesh);
+        this.enemyMeshes.delete(id);
+      }
+    }
+    for (const enemy of state.enemies) {
+      let mesh = this.enemyMeshes.get(enemy.id);
+      if (!mesh) {
+        mesh = this.createEnemyMesh(enemy);
+        this.enemyMeshes.set(enemy.id, mesh);
+        this.scene.add(mesh);
+      }
+      mesh.position.copy(toDisplayXY(enemy.position, state.world));
+    }
+    this.host.dataset.enemyCount = String(this.enemyMeshes.size);
+  }
+
+  private createEnemyMesh(enemy: EnemyState): THREE.Mesh {
+    const type: EnemyKind = enemy.type;
+    const width = enemy.width;
+    const height = enemy.height;
+    const outline = new THREE.Shape();
+    // 原创简洁轮廓，保留 3D 厚度与光照而不引入额外维度玩法。
+    if (type === 'scout') {
+      outline.moveTo(-width * 0.46, height * 0.18);
+      outline.lineTo(-width * 0.25, -height * 0.4);
+      outline.lineTo(0, -height * 0.2);
+      outline.lineTo(width * 0.25, -height * 0.4);
+      outline.lineTo(width * 0.46, height * 0.18);
+      outline.lineTo(0, height * 0.42);
+    } else if (type === 'raider') {
+      outline.moveTo(-width * 0.5, 0);
+      outline.lineTo(-width * 0.27, -height * 0.44);
+      outline.lineTo(width * 0.27, -height * 0.44);
+      outline.lineTo(width * 0.5, 0);
+      outline.lineTo(width * 0.27, height * 0.44);
+      outline.lineTo(-width * 0.27, height * 0.44);
+    } else {
+      outline.moveTo(-width * 0.44, height * 0.33);
+      outline.lineTo(-width * 0.48, -height * 0.32);
+      outline.lineTo(width * 0.48, -height * 0.32);
+      outline.lineTo(width * 0.44, height * 0.33);
+    }
+    outline.closePath();
+    const geometry = new THREE.ExtrudeGeometry(outline, {
+      depth: 0.23, bevelEnabled: true, bevelSegments: 1, steps: 1,
+      bevelSize: 0.045, bevelThickness: 0.055,
+    });
+    const color = type === 'scout' ? 0xe3a16d : type === 'raider' ? 0xdd719c : 0xa591db;
+    const material = new THREE.MeshStandardMaterial({
+      color, emissive: color, emissiveIntensity: 0.13,
+      metalness: 0.36, roughness: 0.45,
+    });
+    this.resources.push(geometry, material);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.userData.enemyId = enemy.id;
+    return mesh;
   }
 
   dispose(): void {
