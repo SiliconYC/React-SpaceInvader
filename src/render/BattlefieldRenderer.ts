@@ -18,8 +18,11 @@ export class BattlefieldRenderer {
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
   private readonly grid: THREE.LineSegments;
   private readonly playerMesh: THREE.Group;
-  private readonly enemyMeshes = new Map<string, THREE.Group>();
-  private readonly enemyTemplates: Readonly<Record<EnemyKind, THREE.Group>>;
+  /** Each distinct ship-part geometry is drawn once per kind, regardless of enemy count. */
+  private readonly enemyBatches: Record<EnemyKind, Array<{
+    readonly mesh: THREE.InstancedMesh; readonly localMatrix: THREE.Matrix4
+  }>> = {scout:[],raider:[],guardian:[]};
+  private readonly tempMatrix = new THREE.Matrix4();
   private readonly projectileMeshes = new Map<number, THREE.Mesh>();
   private readonly enemyProjectileMeshes = new Map<number, THREE.Mesh>();
   private readonly enemyBulletMaterial: THREE.MeshStandardMaterial;
@@ -118,8 +121,22 @@ export class BattlefieldRenderer {
     // 原创 3D 舰船与三种不同体积和轮廓的敌机；同型号克隆共享 GPU 资源。
     const templates = createShipTemplates(this.resources);
     this.playerMesh = templates.player;
-    this.enemyTemplates = templates.enemies;
     this.scene.add(this.playerMesh);
+    // Three meshes are static assets; InstancedMesh allows 24 scouts (and more)
+    // to share the same few GPU draw calls, independent of total alive instances.
+    for(const kind of ['scout','raider','guardian'] as const){
+      const prototype=templates.enemies[kind];
+      for(const part of prototype.children){
+        if(!(part instanceof THREE.Mesh))continue;
+        part.updateMatrix();
+        const instances=new THREE.InstancedMesh(part.geometry,part.material,256);
+        instances.count=0;
+        instances.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        instances.frustumCulled=false;
+        this.enemyBatches[kind].push({mesh:instances,localMatrix:part.matrix.clone()});
+        this.scene.add(instances);
+      }
+    }
     this.scene.add(new THREE.HemisphereLight(0xb5d9ef, 0x10192a, .55));
     const rim = new THREE.DirectionalLight(0x82d8ef, .75);
     rim.position.set(8,-5,11);
@@ -272,24 +289,25 @@ export class BattlefieldRenderer {
   }
 
   /** 每帧读取逻辑快照，渲染器不计算位移/速度/折返。 */
+  /** No per-enemy Mesh allocations or draw calls. XY logic remains entirely in GameSnapshot. */
   private syncEnemies(state: GameSnapshot): void {
-    const active = new Set(state.enemies.map(enemy => enemy.id));
-    for (const [id, mesh] of this.enemyMeshes) {
-      if (!active.has(id)) {
-        this.scene.remove(mesh);
-        this.enemyMeshes.delete(id);
+    const active:Record<EnemyKind,EnemyState[]>={scout:[],raider:[],guardian:[]};
+    for(const enemy of state.enemies)active[enemy.type].push(enemy);
+    for(const kind of ['scout','raider','guardian'] as const){
+      const enemies=active[kind];
+      for(const part of this.enemyBatches[kind]){
+        const instances=part.mesh;
+        instances.count=enemies.length;
+        for(let index=0;index<enemies.length;index++){
+          const {x,y}=enemies[index].position;
+          this.tempMatrix.makeTranslation(x-state.world.width/2,y-state.world.height/2,0);
+          this.tempMatrix.multiply(part.localMatrix);
+          instances.setMatrixAt(index,this.tempMatrix);
+        }
+        if(enemies.length>0)instances.instanceMatrix.needsUpdate=true;
       }
     }
-    for (const enemy of state.enemies) {
-      let mesh = this.enemyMeshes.get(enemy.id);
-      if (!mesh) {
-        mesh = this.createEnemyMesh(enemy);
-        this.enemyMeshes.set(enemy.id, mesh);
-        this.scene.add(mesh);
-      }
-      mesh.position.copy(toDisplayXY(enemy.position, state.world));
-    }
-    this.host.dataset.enemyCount = String(this.enemyMeshes.size);
+    this.host.dataset.enemyCount = String(state.enemies.length);
     this.host.dataset.enemyHp = String(state.enemies[0]?.hp ?? '');
     this.host.dataset.enemyMaxHp = String(state.enemies[0]?.maxHp ?? '');
     this.host.dataset.enemyKinds = [...new Set(state.enemies.map(e => e.type))].sort().join(',');
@@ -300,20 +318,16 @@ export class BattlefieldRenderer {
     this.host.dataset.enemyTurns = String(state.formationTurns);
   }
 
-  private createEnemyMesh(enemy: EnemyState): THREE.Group {
-    // clone() 按引用共享 BufferGeometry/Material；逐个销毁敌机仅需 scene.remove。
-    const model = this.enemyTemplates[enemy.type].clone(true);
-    model.userData.enemyId = enemy.id;
-    model.userData.modelKind = enemy.type;
-    return model;
-  }
-
   dispose(): void {
     this.observer.disconnect();
     this.renderer.domElement.removeEventListener('webglcontextlost',this.lostHandler);
     this.renderer.domElement.removeEventListener('webglcontextrestored',this.restoreHandler);
-    for (const mesh of this.enemyMeshes.values()) this.scene.remove(mesh);
-    this.enemyMeshes.clear();
+    for (const kind of ['scout','raider','guardian'] as const){
+      for(const part of this.enemyBatches[kind]){
+        this.scene.remove(part.mesh);
+        part.mesh.dispose(); // instance buffers only; shared materials/geometries disposed below
+      }
+    }
     this.projectileMeshes.clear();
     this.enemyProjectileMeshes.clear();
     this.effects.dispose();
