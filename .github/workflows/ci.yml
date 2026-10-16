@@ -21,3 +21,13 @@ jobs:
       - run: npm run verify
       - run: npx playwright install chromium --with-deps
       - run: npm run test:browser
+      - name: 上传浏览器基线截图（仅供验收留痕）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-baseline-${{ github.sha }}
+          path: |
+            test-results/**/desktop-baseline.png
+            test-results/**/narrow-baseline.png
+          retention-days: 7
+          if-no-files-found: ignore
