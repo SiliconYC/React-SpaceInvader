@@ -8,7 +8,8 @@ export class TouchControls {
   private enabled=false;
   private lastDirection:-1|0|1=0;
   private fired=false;
-  constructor(private readonly send:Sink){}
+  private readonly send:Sink;
+  constructor(send:Sink){this.send=send;}
   setEnabled(enabled:boolean):void{
     if(this.enabled===enabled)return;
     this.releaseAll();
