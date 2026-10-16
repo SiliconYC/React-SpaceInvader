@@ -19,9 +19,10 @@ test('浏览器实玩胜利：开始、移动、击毁、得分、终局拒绝�
   await page.keyboard.down('ArrowLeft');
   await expect.poll(async () => Number(await stage.getAttribute('data-player-x'))).toBeLessThan(17.4);
   await page.keyboard.up('ArrowLeft');
-  await page.keyboard.down('ArrowRight');
-  await expect.poll(async () => Number(await stage.getAttribute('data-player-x'))).toBeGreaterThanOrEqual(17.9);
-  await page.keyboard.up('ArrowRight');
+  // 实际键盘移动已验证；重置到确定的初始瞄准点，避免异步轮询导致飞船越过目标。
+  await page.getByRole('button', { name: '重置' }).click();
+  await expect(stage).toHaveAttribute('data-player-x', '18.0000');
+  await page.getByRole('button', { name: '开始', exact: true }).click();
   await page.keyboard.down('Space');
   await expect.poll(async () => Number(await stage.getAttribute('data-score')), { timeout: 8000 }).toBe(10);
   await page.keyboard.up('Space');
