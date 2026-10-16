@@ -1,0 +1,28 @@
+{
+  "name": "react-space-invader",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build",
+    "smoke": "node scripts/check-dist.mjs",
+    "verify": "npm run typecheck && npm run build && npm run smoke"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@types/three": "0.180.0",
+    "typescript": "5.8.3",
+    "vite": "6.3.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
