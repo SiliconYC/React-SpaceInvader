@@ -8,8 +8,9 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "build": "vite build",
-    "test:core": "node --experimental-strip-types --test tests/core.test.ts tests/player.test.ts tests/levels.test.ts tests/formation.test.ts tests/combat.test.ts tests/outcomes.test.ts tests/multiwave.test.ts tests/models.test.ts",
+    "test:core": "node --experimental-strip-types --test tests/core.test.ts tests/player.test.ts tests/levels.test.ts tests/formation.test.ts tests/combat.test.ts tests/outcomes.test.ts tests/multiwave.test.ts tests/models.test.ts tests/enemy-behavior.test.ts",
     "test:browser": "playwright test",
+    "measure:difficulty": "node --experimental-strip-types scripts/measure-difficulty.mjs",
     "smoke": "node scripts/check-dist.mjs",
     "verify": "npm run test:core && npm run typecheck && npm run build && npm run smoke"
   },
