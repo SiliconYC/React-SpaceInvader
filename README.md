@@ -2,7 +2,7 @@
 
 基于 **React + TypeScript + Three.js + Vite** 的浏览器游戏：用立体模型呈现经典二维《太空侵略者》，而不引入三维飞行操作。
 
-> **当前状态：** Issue #3–#6 已建立二维核心、可控飞船、严格 JSON 关卡，以及由固定逻辑时钟驱动的敌机集体横移、折返和下降。射击计分尚未实现，下一步 Issue #7。见 [P1 路线图](docs/ROADMAP.md)。
+> **当前状态：** Issue #3–#7 已建立二维规则、可控飞船、JSON 敌阵、敌机折返下降、玩家光弹射击、二维扫掠碰撞和即时计分；敌机开火、生命与终局判断留给 Issue #8。见 [P1 路线图](docs/ROADMAP.md)。
 
 ## 核心设计（2.5D）
 
@@ -11,7 +11,7 @@
 - **关卡数据化：** 独立 JSON 配置决定敌机编队、波次、速度、射击频率和胜负条件；数据须先校验。游戏核心独立于 React/Three.js，可用固定种子无界面测试。
 - 无登录/后端/云存档，不从外部 CDN 加载必需运行时代码，使用原创素材；玩家界面简体中文。
 
-玩家控制：点击「开始」后按 ←/→ 或 A/D 左右移动，松开停止；同时按两个方向停在原地，失焦或暂停清除输入。三维模型只呈现纯逻辑引擎中的二维位置。
+玩家控制：点击「开始」后按 ←/→ 或 A/D 左右移动；**空格射击，按住自动连发（每 12 个逻辑 tick 一发），松开即停止连发**。失焦、暂停及重置释放按键和发射状态。三维模型只呈现纯逻辑引擎中的二维位置。
 
 ## 视觉风格
 
@@ -19,7 +19,7 @@
 
 ## 关卡数据（v1）
 
-示例：`public/levels/first-contact.json`。只需改 JSON 中 `waves[0].formation` 的行列、起点或间距，重建部署即可改变敌阵，无需修改 TypeScript。严格验证字段：`schemaVersion=1`、`id`、`metadata`、`world`、`waves`、`difficulty`、`victory`。每波包含 `spawnAtSeconds`、`formation`（type、rows、columns、startX、startY、spacingX、spacingY）、`movement` 与 `attack`；所有数字须为有限且合法范围，禁止越界或未知敌机类型。**#6 首波敌阵已按 JSON 的 `movement.horizontalSpeed`（世界单位/秒）、`descentPerTurn`（世界单位/次）、`startDirection`（-1/1）、`moveEveryTicks`（60Hz 时钟的整数间隔）及 `difficulty.speedMultiplier` 运动。** #7 才增加开火，#9 才处理多波次。 若配置无效，界面直接显示中文报错，绝不静默回退硬编码阵型。
+示例：`public/levels/first-contact.json`。只需改 JSON 中 `waves[0].formation` 的行列、起点或间距，重建部署即可改变敌阵，无需修改 TypeScript。严格验证字段：`schemaVersion=1`、`id`、`metadata`、`world`、`waves`、`difficulty`、`victory`。每波包含 `spawnAtSeconds`、`formation`（type、rows、columns、startX、startY、spacingX、spacingY）、`movement` 与 `attack`；所有数字须为有限且合法范围，禁止越界或未知敌机类型。**#6 首波敌阵已按 JSON 的 `movement.horizontalSpeed`（世界单位/秒）、`descentPerTurn`（世界单位/次）、`startDirection`（-1/1）、`moveEveryTicks`（60Hz 时钟的整数间隔）及 `difficulty.speedMultiplier` 运动。** #7 已增加玩家射击；#8 才增加敌方攻击、玩家生命与终局判定，#9 才处理多波次。 若配置无效，界面直接显示中文报错，绝不静默回退硬编码阵型。
 
 ## 运行与部署
 
