@@ -3,6 +3,7 @@ import { GameEngine, type GameCommand, type GameSnapshot } from './core/engine.t
 import { BattlefieldRenderer } from './render/BattlefieldRenderer.ts';
 import { KeyboardController } from './input/KeyboardController.ts';
 import { GameAudio, readAudioPrefs, type AudioPrefs } from './audio/GameAudio.ts';
+import { appendScore,clearScores,readScores,scoresFor,type ScoreEntry } from './scores/localScores.ts';
 import { loadLevel } from './levels/load.ts';
 import { loadLevelCatalog, type LevelCatalog } from './levels/catalog.ts';
 
@@ -20,6 +21,10 @@ export default function App() {
   const rendererRef = useRef<BattlefieldRenderer | null>(null);
   const keyboardRef = useRef<KeyboardController | null>(null);
   const sessionRef = useRef<Session | null>(null);
+  const [scoreRecords,setScoreRecords] = useState<ScoreEntry[]>(()=>readScores());
+  const [scoresOpen,setScoresOpen] = useState(false);
+  const scoreSessionRef = useRef(0);
+  const recordedRef = useRef(false);
   const audioRef = useRef<GameAudio | null>(null);
   const [audioPrefs,setAudioPrefs] = useState<AudioPrefs>(() => readAudioPrefs());
   const [audioOpen,setAudioOpen] = useState(false);
@@ -60,6 +65,9 @@ export default function App() {
       if (abort.signal.aborted) return;
       const engine = new GameEngine(GAME_SEED, level.world, level);
       sessionRef.current?.stop();
+      recordedRef.current = false;
+      scoreSessionRef.current++;
+      setScoresOpen(false);
       audioRef.current?.reset();
       audioRef.current?.setPhase('ready');
       const scene = new BattlefieldRenderer(host, engine.snapshot());
@@ -82,6 +90,18 @@ export default function App() {
         const events = engine.drainEvents();
         audioRef.current?.setPhase(snapshot.phase);
         audioRef.current?.onEvents(events);
+        const finished=events.find(e=>e.type==='game-finished');
+        if(finished?.type==='game-finished' && !recordedRef.current && snapshot.levelId){
+          recordedRef.current=true;
+          const entry:ScoreEntry = {
+            id:(window.crypto?.randomUUID?.() ?? (Date.now()+':'+scoreSessionRef.current)),
+            levelId:snapshot.levelId,score:snapshot.score,result:finished.phase,
+            completedWaves:finished.phase==='won'?snapshot.totalWaves:Math.max(0,snapshot.currentWave-1),
+            totalWaves:snapshot.totalWaves,ticks:Math.max(1,snapshot.tick),
+            seed:snapshot.seed,at:new Date().toISOString(),
+          };
+          setScoreRecords(previous=>appendScore(previous,entry));
+        }
         scene.consumeEvents(events,snapshot);
         scene.render(engine.snapshot());
         if (time - lastUi >= 120) {
@@ -130,6 +150,11 @@ export default function App() {
     if (command.type === 'START' || command.type === 'RESUME') getAudio().unlock();
     const result = engine.dispatch(command);
     if (result.accepted) {
+      if (command.type === 'RESET' || command.type === 'START') {
+        recordedRef.current = false;
+        scoreSessionRef.current++;
+        setScoresOpen(false);
+      }
       if (command.type === 'RESET') audioRef.current?.reset();
       audioRef.current?.setPhase(engine.snapshot().phase);
       keyboardRef.current?.setEnabled(engine.snapshot().phase === 'running');
@@ -155,12 +180,30 @@ export default function App() {
           <span className="sr-only" data-testid="level-name">{levelName}</span>
         </div>
         <div className="header-tools">
+          <button type="button" className="debug-toggle" aria-expanded={scoresOpen}
+            disabled={state.phase==='running'||state.phase==='paused'} aria-controls="score-board"
+            onClick={() => setScoresOpen(v=>!v)}>成绩</button>
           <button type="button" className="debug-toggle" aria-expanded={audioOpen}
             aria-controls="audio-settings" onClick={() => setAudioOpen(v => !v)}>音频</button>
           <button className="debug-toggle" type="button" aria-pressed={debug}
           onClick={() => setDebug(value => !value)}>{debug ? '关闭调试' : '调试'}</button>
         </div>
       </header>
+      {scoresOpen && state.phase!=='running' && state.phase!=='paused' &&
+        <section id="score-board" className="score-board" aria-label="本机排行榜">
+          <h2>本机成绩 · {catalog?.levels.find(l=>l.id===selectedId)?.name ?? levelName}</h2>
+          <ol data-testid="score-list">
+            {scoresFor(scoreRecords,selectedId??'').map(entry=><li key={entry.id}>
+              <strong>{entry.score}</strong><span>{entry.result==='won'?'通关':'失败'} · {entry.completedWaves}/{entry.totalWaves} 波 · {(entry.ticks/60).toFixed(1)} 秒</span>
+            </li>)}
+          </ol>
+          {!scoresFor(scoreRecords,selectedId??'').length && <p>暂无成绩</p>}
+          <button type="button" className="clear-scores" onClick={()=>{
+            if(window.confirm('确认清空所有关卡的本机成绩？此操作不可撤销。')){
+              clearScores();setScoreRecords([]);
+            }
+          }}>清空本机成绩</button>
+        </section>}
       {audioOpen && <section id="audio-settings" className="audio-settings" aria-label="音频设置">
         <label><input type="checkbox" checked={audioPrefs.effects}
           onChange={e => changeAudio({...audioPrefs,effects:e.target.checked})}/> 音效</label>
@@ -189,6 +232,7 @@ export default function App() {
           <span>{state.phase === 'won' ? '敌机已肃清' :
             state.outcome === 'line-breached' ? '防线失守' : '飞船已被击毁'}</span>
           <span>得分 {state.score}</span>
+          <span data-testid="local-best">本关最高 {Math.max(state.score, scoresFor(scoreRecords,selectedId??'')[0]?.score??0)}</span>
         </div>
       )}
       {state.phase === 'paused' && <span className="pause-overlay" data-testid="pause-message">已暂停</span>}
