@@ -18,6 +18,8 @@ export class BattlefieldRenderer {
   private readonly playerMesh: THREE.Group;
   private readonly enemyMeshes = new Map<string, THREE.Mesh>();
   private readonly projectileMeshes = new Map<number, THREE.Mesh>();
+  private readonly enemyProjectileMeshes = new Map<number, THREE.Mesh>();
+  private readonly enemyBulletMaterial: THREE.MeshStandardMaterial;
   private readonly bulletGeometry: THREE.BufferGeometry;
   private readonly bulletMaterial: THREE.MeshStandardMaterial;
   private readonly hitGeometry: THREE.BufferGeometry;
@@ -135,9 +137,13 @@ export class BattlefieldRenderer {
       color: 0xd8f9ff, emissive: 0x51cfff, emissiveIntensity: 1.9,
       metalness: 0.1, roughness: 0.2,
     });
+    this.enemyBulletMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffb6a0, emissive: 0xef553f, emissiveIntensity: 1.25,
+      metalness: 0.08, roughness: 0.3,
+    });
     this.hitGeometry = new THREE.IcosahedronGeometry(0.55, 1);
     this.hitMaterial = new THREE.MeshBasicMaterial({ color: 0xffdb9b, transparent: true, opacity: 0.9 });
-    this.resources.push(this.bulletGeometry, this.bulletMaterial, this.hitGeometry, this.hitMaterial);
+    this.resources.push(this.bulletGeometry, this.bulletMaterial, this.enemyBulletMaterial, this.hitGeometry, this.hitMaterial);
 
     // 模型类型可调整外观，但队列数量、坐标和种类只来自纯逻辑快照.
     this.syncEnemies(snapshot);
@@ -184,6 +190,13 @@ export class BattlefieldRenderer {
     this.host.dataset.playerY = state.player.position.y.toFixed(4);
     this.syncEnemies(state);
     this.syncProjectiles(state);
+    this.syncEnemyProjectiles(state);
+    // Display-only damage feedback driven by fixed rule ticks, not a damage decision.
+    this.playerMesh.visible = state.phase !== 'lost' &&
+      !(state.invulnerableUntilTick > state.tick && Math.floor(state.tick / 6) % 2 === 0);
+    this.host.dataset.lives = String(state.lives);
+    this.host.dataset.gamePhase = state.phase;
+    this.host.dataset.outcome = state.outcome ?? '';
     const now = performance.now();
     for (const flash of this.flashes) {
       const age = (now - flash.createdAt) / 230;
@@ -226,6 +239,27 @@ export class BattlefieldRenderer {
       mesh.position.z = 0.48;
     }
     this.host.dataset.bulletCount = String(this.projectileMeshes.size);
+  }
+
+  private syncEnemyProjectiles(state: GameSnapshot): void {
+    const ids = new Set(state.enemyProjectiles.map(bullet => bullet.id));
+    for (const [id, mesh] of this.enemyProjectileMeshes) {
+      if (!ids.has(id)) {
+        this.scene.remove(mesh);
+        this.enemyProjectileMeshes.delete(id);
+      }
+    }
+    for (const bullet of state.enemyProjectiles) {
+      let mesh = this.enemyProjectileMeshes.get(bullet.id);
+      if (!mesh) {
+        mesh = new THREE.Mesh(this.bulletGeometry, this.enemyBulletMaterial);
+        this.scene.add(mesh);
+        this.enemyProjectileMeshes.set(bullet.id, mesh);
+      }
+      mesh.position.copy(toDisplayXY(bullet.position, this.world));
+      mesh.position.z = 0.48;
+    }
+    this.host.dataset.enemyBulletCount = String(this.enemyProjectileMeshes.size);
   }
 
   /** 每帧读取逻辑快照，渲染器不计算位移/速度/折返。 */

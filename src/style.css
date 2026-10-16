@@ -143,3 +143,20 @@ h1 { margin: 0; font-size: clamp(18px, 2vw, 24px); line-height: 1.2; font-weight
   .score-hud strong { font-size: 14px; }
   .control-hint { font-size: 10px; }
 }
+
+.score-hud { display: flex; align-items: baseline; justify-content: center; gap: 30px; }
+.life-indicator strong { color: #a8f1e4; }
+.result-overlay {
+  position: absolute; z-index: 2; left: 50%; top: 47%;
+  transform: translate(-50%, -50%);
+  display: flex; align-items: center; flex-direction: column; gap: 10px;
+  text-align: center; pointer-events: none;
+  color: #e3edf7; text-shadow: 0 2px 12px rgba(1, 6, 14, .9);
+}
+.result-overlay strong { font-size: clamp(40px, 6.5vw, 74px); letter-spacing: .22em; font-weight: 600; }
+.result-overlay span { color: #aec2cc; letter-spacing: .1em; font-size: 13px; }
+.pause-overlay {
+  position: absolute; z-index: 2; left: 50%; top: 46%; transform: translate(-50%, -50%);
+  font-size: 32px; color: #d8ecf6; letter-spacing: .18em; pointer-events: none;
+}
+@media(max-width: 650px) { .score-hud { gap: 18px; } }

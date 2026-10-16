@@ -9,7 +9,7 @@
 - 关卡由独立、版本化、经严格校验的 JSON 数据驱动。P1 至少两份可玩关卡、多波次。
 - 每次独立交付合并 `dev`，均应能通过 <https://siliconyc.github.io/React-SpaceInvader/> 看到与验证可运行增量。
 
-## 已建立的 7 个 Issue（#3～#7 已交付，其余待实施）
+## 已建立的 7 个 Issue（#3～#8 已交付，其余待实施）
 
 | 顺序 | Issue | 独立用户可见验收 |
 | --- | --- | --- |
@@ -18,7 +18,7 @@
 | 3 | [#5 JSON 关卡与敌机编队](https://github.com/SiliconYC/React-SpaceInvader/issues/5) | 改 JSON 即可改变屏幕敌人阵形（已交付） |
 | 4 | [#6 敌机折返与下降](https://github.com/SiliconYC/React-SpaceInvader/issues/6) | 编队横移、碰壁、下降均可见（已交付） |
 | 5 | [#7 玩家射击、碰撞与计分](https://github.com/SiliconYC/React-SpaceInvader/issues/7) | 可实际击落敌人并累计积分（已交付） |
-| 6 | [#8 敌机射击、生命与胜负](https://github.com/SiliconYC/React-SpaceInvader/issues/8) | 能完成一整局并重新开始 |
+| 6 | [#8 敌机射击、生命与胜负](https://github.com/SiliconYC/React-SpaceInvader/issues/8) | 能完成首关一波、胜败、重新开始（已交付） |
 | 7 | [#9 多波次、双关卡与端到端验收](https://github.com/SiliconYC/React-SpaceInvader/issues/9) | 两种数据配置关卡可完整游玩 |
 
 ## 开发顺序及边界

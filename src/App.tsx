@@ -7,6 +7,7 @@ import { loadLevel } from './levels/load.ts';
 const GAME_SEED = 20261017;
 const LABELS: Record<GameSnapshot['phase'], string> = {
   ready: '待启动', running: '运行中', paused: '已暂停', ended: '已结束',
+  won: '胜利', lost: '失败',
 };
 
 export default function App() {
@@ -106,14 +107,27 @@ export default function App() {
           onClick={() => setDebug(value => !value)}>{debug ? '关闭调试' : '调试'}</button>
       </header>
 
-      <div className="score-hud" data-testid="score">分数 <strong>{state.score}</strong></div>
+      <div className="score-hud" aria-label="游戏成绩">
+        <span data-testid="score">分数 <strong>{state.score}</strong></span>
+        <span className="life-indicator" data-testid="lives">生命 <strong>{state.lives}</strong></span>
+      </div>
       {loadError && <div role="alert" data-testid="level-error" className="level-error">{loadError}</div>}
+      {(state.phase === 'won' || state.phase === 'lost') && (
+        <div className="result-overlay" data-testid="game-result" role="status">
+          <strong>{state.phase === 'won' ? '胜利' : '失败'}</strong>
+          <span>{state.phase === 'won' ? '敌机已肃清' :
+            state.outcome === 'line-breached' ? '防线失守' : '飞船已被击毁'}</span>
+          <span>得分 {state.score}</span>
+        </div>
+      )}
+      {state.phase === 'paused' && <span className="pause-overlay" data-testid="pause-message">已暂停</span>}
       <div className="control-hint">← → / A D <span>移动</span><span>空格 · 射击</span></div>
       <div className="play-actions" aria-label="引擎操作">
         {!loadError && webgl === 'ready' && state.phase === 'ready' && <button type="button" onClick={() => send({ type: 'START' })}>开始</button>}
         {state.phase === 'running' && <button type="button" onClick={() => send({ type: 'PAUSE' })}>暂停</button>}
         {state.phase === 'paused' && <button type="button" onClick={() => send({ type: 'RESUME' })}>继续</button>}
-        {state.phase === 'ended' && <button type="button" onClick={() => { send({ type: 'RESET' }); send({ type: 'START' }); }}>重新开始</button>}
+        {(state.phase === 'ended' || state.phase === 'won' || state.phase === 'lost') &&
+          <button type="button" onClick={() => { send({ type: 'RESET' }); send({ type: 'START' }); }}>重新开始</button>}
         {state.phase !== 'ready' && <button className="secondary" type="button" onClick={() => send({ type: 'RESET' })}>重置</button>}
       </div>
 
@@ -128,6 +142,8 @@ export default function App() {
             <div><dt>种子</dt><dd>{state.seed}</dd></div>
             <div><dt>子弹</dt><dd>{state.projectiles.length}</dd></div>
             <div><dt>敌机</dt><dd>{state.enemies.length}</dd></div>
+            <div><dt>敌弹</dt><dd>{state.enemyProjectiles.length}</dd></div>
+            <div><dt>结果</dt><dd>{state.outcome ?? '—'}</dd></div>
           </dl>
           {(state.phase === 'running' || state.phase === 'paused') &&
             <button className="secondary" type="button" onClick={() => send({ type: 'END' })}>结束测试</button>}

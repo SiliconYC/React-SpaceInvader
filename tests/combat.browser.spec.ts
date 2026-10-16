@@ -25,6 +25,9 @@ test('空格长按击毁 JSON 指定的敌机，分数即时增加，暂停不�
   await expect(stage).toHaveAttribute('data-enemy-count', '0');
   await page.keyboard.up('Space');
   await expect(page.getByTestId('score')).toContainText('10');
+  await expect(page.getByTestId('game-result')).toContainText('胜利');
+  await page.getByRole('button', { name: '重新开始' }).click();
+  await expect(stage).toHaveAttribute('data-enemy-count', '1');
   await page.getByRole('button', { name: '暂停' }).click();
   const bullets = await stage.getAttribute('data-bullet-count');
   await page.keyboard.down('Space');
