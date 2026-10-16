@@ -1,0 +1,26 @@
+name: 一次性生成依赖锁文件
+on:
+  push:
+    branches: [issue-3-deterministic-core]
+    paths:
+      - package.json
+      - .github/workflows/lockfile-bootstrap.yml
+permissions:
+  contents: write
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 解析版本并生成锁文件
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: 提交可复现锁文件
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add package-lock.json
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'build: lock exact npm dependency graph for issue #3'
+          git push origin HEAD:issue-3-deterministic-core

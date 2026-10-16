@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "build": "vite build",
+    "test:core": "node --experimental-strip-types --test tests/core.test.ts",
+    "test:browser": "playwright test",
     "smoke": "node scripts/check-dist.mjs",
-    "verify": "npm run typecheck && npm run build && npm run smoke"
+    "verify": "npm run test:core && npm run typecheck && npm run build && npm run smoke"
   },
   "dependencies": {
     "react": "18.3.1",
@@ -16,13 +19,12 @@
     "three": "0.180.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
     "@types/three": "0.180.0",
     "typescript": "5.8.3",
     "vite": "6.3.5"
   },
-  "engines": {
-    "node": ">=22"
-  }
+  "engines": { "node": ">=22" }
 }
