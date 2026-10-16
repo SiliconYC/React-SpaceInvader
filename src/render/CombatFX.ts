@@ -3,7 +3,7 @@ import type { GameEvent, GameSnapshot } from '../core/engine.ts';
 import type { World2, Point2 } from '../core/world.ts';
 
 
-type Kind = 'muzzle' | 'burst' | 'damage' | 'wave' | 'finish';
+type Kind = 'muzzle' | 'burst' | 'damage' | 'armor' | 'wave' | 'finish';
 interface Particle {
   readonly mesh: THREE.Mesh;
   readonly born: number;
@@ -38,6 +38,7 @@ export class CombatFX {
       muzzle:material(0x85eaff,.88),
       burst:material(0xffbf83,.88),
       damage:material(0xff6675,.9),
+      armor:material(0xffe19a,.86),
       wave:material(0x72d5f2,.58),
       finish:material(0xe5f4ff,.78),
     };
@@ -85,6 +86,7 @@ export class CombatFX {
       let id='';
       if(event.type==='shot-fired') id='shot:'+event.tick+':'+event.bulletId;
       else if(event.type==='enemy-hit') id='kill:'+event.tick+':'+event.bulletId+':'+event.enemyId;
+      else if(event.type==='enemy-damaged') id='armor:'+event.tick+':'+event.bulletId+':'+event.enemyId;
       else if(event.type==='player-hit') id='hurt:'+event.tick+':'+event.bulletId;
       else if(event.type==='wave-started') id='wave:'+event.wave+':'+event.tick;
       else if(event.type==='game-finished') id='finish:'+event.tick;
@@ -96,6 +98,8 @@ export class CombatFX {
           {x:state.player.position.x,y:state.player.position.y+.8},2,event.tick,event.bulletId);
       }else if(event.type==='enemy-hit'){
         this.emit('burst',event.position,7,event.tick,event.bulletId);
+      }else if(event.type==='enemy-damaged'){
+        this.emit('armor',event.position,3,event.tick,event.bulletId);
       }else if(event.type==='player-hit'){
         this.emit('damage',event.position,6,event.tick,event.bulletId);
       }else if(event.type==='wave-started'){
