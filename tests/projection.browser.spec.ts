@@ -19,7 +19,7 @@ async function assertProjection(page: import('@playwright/test').Page) {
 }
 test('P3/A1: 正交基线与弱透视 XY 投影一致，桌面与窄屏均保留原有操作',async({page},info)=>{
   for(const mode of ['ortho','perspective'] as const){
-    await page.goto(mode==='ortho'?'./?projection=ortho':'./');
+    await page.goto(mode==='ortho'?'./':'./?projection=perspective');
     const stage=page.getByTestId('battlefield');
     await expect(stage).toHaveAttribute('data-camera-projection',mode==='ortho'?'orthographic':'perspective');
     await assertProjection(page);
@@ -42,7 +42,7 @@ test('P3/A1: 触控竖屏透视不改变 XY 瞄准中心',async({browser},info)=
   const context=await browser.newContext({baseURL:info.project.use.baseURL as string,viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2});
   try{
     const page=await context.newPage();
-    await page.goto('./');
+    await page.goto('./?projection=perspective');
     await expect(page.getByTestId('battlefield')).toHaveAttribute('data-camera-projection','perspective');
     await assertProjection(page);
     await page.screenshot({path:info.outputPath('p3-touch-portrait.png'),fullPage:true});
