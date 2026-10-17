@@ -1,0 +1,24 @@
+import {test,expect} from '@playwright/test';
+test('P3/C3: 真实低模实例化漂移与横屏、手机遮挡/资源验收',async({page},info)=>{
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('./');
+  const stage=page.getByTestId('battlefield');
+  await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
+  await expect(stage).toHaveAttribute('data-asteroid-batches','4');
+  await expect(stage).toHaveAttribute('data-asteroid-visible','12');
+  expect(Number(await stage.getAttribute('data-draw-calls'))).toBeLessThan(64);
+  await page.screenshot({path:info.outputPath('p3-c3-distant-asteroids.png'),fullPage:true});
+  await page.getByRole('button',{name:'开始',exact:true}).click();
+  const initial=await stage.getAttribute('data-asteroid-motion');
+  await expect.poll(()=>stage.getAttribute('data-asteroid-motion')).not.toBe(initial);
+  await page.getByRole('button',{name:'暂停'}).click();
+  const frozen=await stage.getAttribute('data-asteroid-motion');
+  await page.waitForTimeout(150);
+  expect(await stage.getAttribute('data-asteroid-motion')).toBe(frozen);
+  await page.getByRole('button',{name:'重置'}).click();
+  await expect(stage).toHaveAttribute('data-asteroid-motion','0');
+  await page.setViewportSize({width:390,height:844});
+  await expect(stage).toHaveAttribute('data-asteroid-visible','0');
+  await page.screenshot({path:info.outputPath('p3-c3-asteroids-portrait-hidden.png'),fullPage:true});
+  expect(errors).toEqual([]);
+});
