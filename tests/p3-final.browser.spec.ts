@@ -14,7 +14,7 @@ test('P3/E2 1920×1080 与宽屏：真实银河/3D模型/HUD 及同源资源',as
   const stage=page.getByTestId('battlefield');
   await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
   await expect(stage).toHaveAttribute('data-galaxy','loaded');
-  await expect(stage).toHaveAttribute('data-planet-meshes','2');
+  await expect(stage).toHaveAttribute('data-planet-meshes','3');
   await expect(stage).toHaveAttribute('data-asteroid-batches','5');
   await expect(stage).toHaveAttribute('data-foreground-count','2');
   await expect(stage).toHaveAttribute('data-debug-grid','off');
