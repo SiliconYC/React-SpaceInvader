@@ -58,7 +58,6 @@ export function sculptRaider(track:Track):THREE.Group{
   const pale=surface(track,0xffc3a1,.10,.46);
   const edge=surface(track,0xb94e5e,.28,.39);
   const graphite=surface(track,0x29394e,.30,.45);
-  const joint=surface(track,0x667887,.44,.35);
   const lens=surface(track,0x172f49,.20,.17);
   const muzzle=light(track,0xffcc9a,0xff805e);
 
@@ -101,7 +100,7 @@ export function sculptRaider(track:Track):THREE.Group{
       {y:-.67,radiusX:.086,centerZ:.042,radiusZ:.080},
       {y:-.62,radiusX:.092,centerZ:.045,radiusZ:.093},
       {y:-.575,radiusX:.07,centerZ:.045,radiusZ:.07},
-    ],joint,'raider-weapon-muzzle-bezel',side*.67,12);
+    ],pale,'raider-weapon-muzzle-bezel',side*.67,12);
     eye(g,track,muzzle,'raider-muzzle-emitter',[side*.67,-.665,.044],[.060,.045,.059]);
     eye(g,track,edge,'raider-armored-wing-joint',[side*.39,.13,.215],[.16,.18,.085]);
   }
@@ -122,7 +121,6 @@ export function sculptGuardian(track:Track):THREE.Group{
   const polished=surface(track,0xb7b3e0,.11,.39);
   const shadow=surface(track,0x4b4d85,.23,.51);
   const steel=surface(track,0x34475f,.36,.47);
-  const ring=surface(track,0xc0cbd9,.50,.30);
   const energy=light(track,0x9de6fa,0x5ccef2);
   // Widened structural shield body is visibly much deeper than Raider.
   plate(g,track,[
@@ -152,7 +150,7 @@ export function sculptGuardian(track:Track):THREE.Group{
   }
   // Framed energy module appears inset into a real thick armor housing.
   eye(g,track,steel,'guardian-energy-recess',[0,-.01,.485],[.402,.408,.17]);
-  eye(g,track,ring,'guardian-raised-metal-bezel',[0,-.015,.560],[.315,.315,.125]);
+  eye(g,track,polished,'guardian-raised-metal-bezel',[0,-.015,.560],[.315,.315,.125]);
   eye(g,track,shadow,'guardian-core-dark-aperture',[0,-.03,.625],[.258,.258,.089]);
   eye(g,track,energy,'guardian-three-dimensional-energy-lens',[0,-.045,.681],[.197,.194,.125]);
   eye(g,track,polished,'guardian-lens-specular-pin',[-.065,.015,.795],[.045,.054,.022]);
