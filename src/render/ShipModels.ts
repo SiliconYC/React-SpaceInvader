@@ -18,11 +18,11 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
     color, emissive: color, emissiveIntensity: .95, roughness: .2, metalness: .18,
   }));
   const dark = armor(0x243c56, 0.02);
-  const scoutMetal = armor(0xf0ae77, .12);
+  const scoutMetal = armor(0xffb86b, .08);
   const scoutGlow = gleam(0xffce92);
-  const raiderMetal = armor(0xd97baa, .12);
-  const raiderGlow = gleam(0xff8cbd);
-  const guardianMetal = armor(0xb5a3e7, .08);
+  const raiderMetal = armor(0xe67a7d, .08);
+  const raiderGlow = gleam(0xffb7a7);
+  const guardianMetal = armor(0xa99adf, .08);
   const guardianGlow = gleam(0xaa9aff);
 
   function hull(group: THREE.Group, points: number[], depth: number, material: THREE.Material, z = 0): void {
