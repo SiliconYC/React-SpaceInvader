@@ -82,5 +82,7 @@ jobs:
             test-results/**/guardian-narrow-models.png
             test-results/**/touch-*.png
             test-results/**/mobile-gpu-performance.json
+            test-results/**/p3-*.json
+            artifacts/p3-asset-audit.json
           retention-days: 7
           if-no-files-found: ignore
