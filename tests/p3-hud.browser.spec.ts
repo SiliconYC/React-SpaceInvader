@@ -15,9 +15,9 @@ test('P3/D3 桌面：全画布、轻量 HUD、可用关卡/音频/成绩/暂停/
   await page.getByRole('button',{name:'音频'}).click();
   await expect(page.getByLabel('背景音乐')).toBeVisible();
   await page.getByRole('button',{name:'音频'}).click();
-  await page.getByRole('button',{name:'成绩'}).click();
+  await page.getByRole('button',{name:'成绩',exact:true}).click();
   await expect(page.getByRole('region',{name:'本机排行榜'})).toBeVisible();
-  await page.getByRole('button',{name:'成绩'}).click();
+  await page.getByRole('button',{name:'成绩',exact:true}).click();
   await page.getByTestId('level-select').selectOption('crossfire');
   await expect(page.getByTestId('battlefield')).toHaveAttribute('data-total-waves','2');
   await page.getByRole('button',{name:'开始',exact:true}).click();
