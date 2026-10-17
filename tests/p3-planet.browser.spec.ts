@@ -4,7 +4,7 @@ test('P3/C2: 真球体 + RingGeometry 背景在桌面和竖屏正常，敌机仍
   await page.goto('./');
   const stage=page.getByTestId('battlefield');
   await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
-  await expect(stage).toHaveAttribute('data-planet-meshes','2');
+  await expect(stage).toHaveAttribute('data-planet-meshes','3');
   const desktopSize=Number(await stage.getAttribute('data-planet-radius'));
   expect(desktopSize).toBeGreaterThan(1);
   await page.screenshot({path:info.outputPath('p3-c2-ringed-planet-desktop.png'),fullPage:true});
@@ -20,7 +20,7 @@ test('P3/C2: 真球体 + RingGeometry 背景在桌面和竖屏正常，敌机仍
 test('P3/C2: 真三维环视角和固定规则时钟暂停',async({page},info)=>{
   await page.goto('./?planetInspect=side');
   const stage=page.getByTestId('battlefield');
-  await expect(stage).toHaveAttribute('data-planet-meshes','2');
+  await expect(stage).toHaveAttribute('data-planet-meshes','3');
   await page.screenshot({path:info.outputPath('p3-c2-ringed-planet-tilt.png'),fullPage:true});
   await page.getByRole('button',{name:'开始',exact:true}).click();
   await expect(stage).toHaveAttribute('data-planet-rotation',/^0\.9\d*$/);
