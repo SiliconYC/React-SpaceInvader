@@ -6,6 +6,7 @@ import { createShipTemplates } from './ShipModels.ts';
 import { enemyVisualPose } from './EnemyShipMotion.ts';
 import { PlayerShipMotion } from './PlayerShipMotion.ts';
 import { CombatFX } from './CombatFX.ts';
+import { CameraDirector } from './CameraDirector.ts';
 import { combatProjection, compositionFromSearch } from './CombatProjection.ts';
 import { CombatSceneLayers, SCENE_LAYER_ORDER } from './CombatSceneLayers.ts';
 import { GalaxyBackdrop } from './GalaxyBackdrop.ts';
@@ -29,6 +30,10 @@ export class BattlefieldRenderer {
   private readonly asteroids: AsteroidField;
   private readonly foregroundRocks: ForegroundRocks;
   private readonly camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
+  private readonly cameraDirector = new CameraDirector();
+  private readonly suspendDirector = () => this.cameraDirector.suspend();
+  private baseCameraY = 0;
+  private baseCameraDistance = 50;
   private readonly world: Readonly<World2>;
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
   private readonly grid: THREE.LineSegments;
@@ -73,7 +78,7 @@ export class BattlefieldRenderer {
   private readonly observer: ResizeObserver;
   private contextLost=false;
   private readonly lostHandler=(event:Event)=>{
-    event.preventDefault();this.contextLost=true;
+    event.preventDefault();this.contextLost=true;this.cameraDirector.suspend();
     this.host.dataset.webglContext='lost';this.onContext?.(true);
   };
   private readonly restoreHandler=()=>{
@@ -96,6 +101,8 @@ export class BattlefieldRenderer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
     host.dataset.pixelRatio=this.renderer.getPixelRatio().toFixed(2);
     host.dataset.webglContext='ready';
+    document.addEventListener('visibilitychange',this.suspendDirector);
+    window.addEventListener('blur',this.suspendDirector);
     this.renderer.domElement.addEventListener('webglcontextlost',this.lostHandler);
     this.renderer.domElement.addEventListener('webglcontextrestored',this.restoreHandler);
     this.renderer.setClearColor(0x050913, 1);
@@ -236,8 +243,12 @@ export class BattlefieldRenderer {
     this.host.dataset.composition=this.composition;
     const isPerspective = this.camera instanceof THREE.PerspectiveCamera;
     const distance = isPerspective ? layout.cameraDistance : 50;
+    this.baseCameraY=layout.centerY;
+    this.baseCameraDistance=distance;
+    this.camera.zoom=1;
     this.camera.position.set(0, layout.centerY, distance);
     this.camera.lookAt(0, layout.centerY, 0);
+    this.camera.rotation.z=0;
     if (this.camera instanceof THREE.PerspectiveCamera) {
       this.camera.fov = layout.fovDegrees;
       this.camera.aspect = width / height;
@@ -279,6 +290,25 @@ export class BattlefieldRenderer {
     if (state.world.width !== this.world.width || state.world.height !== this.world.height) {
       throw new Error('渲染器不能修改二维世界的规则尺寸');
     }
+    // Live Three.js-only camera: render before projecting the player's screen position.
+    // Rules remain at authoritative XY regardless of pan / rotation / lens zoom.
+    const poseCamera=this.cameraDirector.sample(performance.now(),state.phase,
+      !document.hidden&&!this.contextLost,
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false);
+    if(!this.modelPreview){
+      this.camera.position.set(poseCamera.x,this.baseCameraY+poseCamera.y,this.baseCameraDistance);
+      this.camera.lookAt(poseCamera.x,this.baseCameraY+poseCamera.y,0);
+      this.camera.rotation.z=poseCamera.roll;
+      this.camera.zoom=poseCamera.zoom;
+      this.camera.updateProjectionMatrix();
+      this.camera.updateMatrixWorld(true);
+    }
+    this.host.dataset.cameraDirector=poseCamera.cue;
+    this.host.dataset.cameraDirectorProgress=poseCamera.progress.toFixed(4);
+    this.host.dataset.cameraDirectorZoom=poseCamera.zoom.toFixed(5);
+    this.host.dataset.cameraDirectorX=poseCamera.x.toFixed(5);
+    this.host.dataset.cameraDirectorY=poseCamera.y.toFixed(5);
+    this.host.dataset.cameraDirectorRoll=poseCamera.roll.toFixed(5);
     const point = toDisplayXY(state.player.position, state.world);
     this.playerMesh.position.copy(point);
     const pose=this.playerMotion.update(state.player.position.x,state.tick,state.phase,performance.now(),this.reducedMotion);
@@ -384,7 +414,7 @@ export class BattlefieldRenderer {
 
   /** All feedback is initiated only by unique authoritative GameEvent records. */
   consumeEvents(events: readonly GameEvent[],state?:GameSnapshot):void {
-    if(state)this.effects.consume(events,state);
+    if(state){this.effects.consume(events,state);this.cameraDirector.consume(events,state);}
     for(const event of events){
       if(event.type==='game-reset'){
         this.playerMotion.reset();
@@ -520,6 +550,8 @@ export class BattlefieldRenderer {
   }
 
   dispose(): void {
+    document.removeEventListener('visibilitychange',this.suspendDirector);
+    window.removeEventListener('blur',this.suspendDirector);
     this.observer.disconnect();
     this.renderer.domElement.removeEventListener('webglcontextlost',this.lostHandler);
     this.renderer.domElement.removeEventListener('webglcontextrestored',this.restoreHandler);
