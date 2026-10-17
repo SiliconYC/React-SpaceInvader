@@ -6,13 +6,13 @@ export const VISUAL_THEMES = Object.freeze({
     id:'nebula-blue',sky:0x07152b,galaxyTint:0xffffff,
     planetTint:0xffffff,asteroidTint:0xffffff,foregroundTint:0xffffff,
     rimTint:0x94b7ed,
-    background:'art/backgrounds/galaxy-v2.webp',
+    background:'art/backgrounds/galaxy-p4-veil.webp',
   }),
   'violet-drift':Object.freeze({
     id:'violet-drift',sky:0x130e30,galaxyTint:0xd0b8f2,
     planetTint:0xcbb2f2,asteroidTint:0xc6b1df,foregroundTint:0xbbaacc,
     rimTint:0xbda0ea,
-    background:'art/backgrounds/galaxy-v2.webp',
+    background:'art/backgrounds/galaxy-p4-veil.webp',
   }),
 });
 export type VisualThemeId=keyof typeof VISUAL_THEMES;
