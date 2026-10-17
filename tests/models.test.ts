@@ -68,3 +68,25 @@ test('P3 三种 Q 敌机灰度剪影不同，真实厚度且每类复用源网�
   }
   resources.forEach(item=>item.dispose());
 });
+
+test('P4/A2 连续原创建模：机身/两侧翼型均为独立的有法线三维曲面',()=>{
+  const resources:Array<THREE.BufferGeometry|THREE.Material>=[];
+  const {player}=createShipTemplates(resources);
+  const meshes=player.children.filter(x=>x instanceof THREE.Mesh) as THREE.Mesh[];
+  assert.ok(meshes.length>=14);
+  const fuselage=meshes.find(x=>x.name==='continuous-ceramic-fuselage');
+  const wing=meshes.filter(x=>x.name.endsWith('main-airfoil'));
+  assert.ok(fuselage&&wing.length===2,'真正连续机身与双翼而不是复制旧 BoxGeometry');
+  assert.equal(fuselage!.geometry.type,'BufferGeometry');
+  for(const mesh of [fuselage!,...wing]){
+    assert.ok(mesh.geometry.getAttribute('normal').count>20);
+    const bbox=new THREE.Box3().setFromObject(mesh);
+    assert.ok(bbox.max.z>bbox.min.z);
+  }
+  assert.equal(meshes.filter(x=>x.name==='engine-core').length,2);
+  assert.ok(meshes.some(x=>x.name==='single-polished-raised-canopy'));
+  const bounds=new THREE.Box3().setFromObject(player);
+  assert.ok(bounds.max.x-bounds.min.x<=2.5);
+  assert.equal(player.position.z,0);
+  resources.forEach(r=>r.dispose());
+});

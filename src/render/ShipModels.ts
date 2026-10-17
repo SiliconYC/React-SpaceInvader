@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { EnemyKind } from '../core/level.ts';
 import { P3_COLORS, P3_LIGHTING } from './P3Palette.ts';
+import { createHullLoft, createWingAirfoil } from './P4PlayerGeometry.ts';
 
 /** 造型素材均为原创参数化网格，单位皆位于 XY 逻辑平面，厚度只占显示用 z。 */
 export type GpuResource = THREE.BufferGeometry | THREE.Material;
@@ -55,51 +56,104 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
     group.add(mesh);
   }
 
-  // P3/B1: 源码即正式模型资产。真实体积来自挤出翼板、多个低面数椭球和双推进舱，
-  // 没有平面图片或外部 GLB。轮廓以约 2.34 × 1.43 单位落在原 2.5 × 1.4 的 XY hitbox 附近。
-  const player = new THREE.Group();
+  // P4/A2: original parametric, closed airfoil surfaces, not an assembly of rectangular blocks.
+  // Wing span 2.36 (< 2.5 rule hitbox width); the engine's coordinate root remains at (0,0).
+  const player=new THREE.Group();
   player.name='q-player-pivot';
-  const ceramic = track(new THREE.MeshStandardMaterial({
-    color:P3_COLORS.ceramic,metalness:.12,roughness:.62,flatShading:true,
+  const ceramic=track(new THREE.MeshPhysicalMaterial({
+    color:0xf0f6ef,roughness:.42,metalness:.06,clearcoat:.32,clearcoatRoughness:.4,
   }));
-  const blue = track(new THREE.MeshStandardMaterial({
-    color:P3_COLORS.playerBlue,metalness:.14,roughness:.58,flatShading:true,
+  const blue=track(new THREE.MeshStandardMaterial({
+    color:0x4daed1,roughness:.42,metalness:.13,side:THREE.DoubleSide,
   }));
-  const deepBlue = track(new THREE.MeshStandardMaterial({
-    color:P3_COLORS.playerDeep,metalness:.2,roughness:.53,flatShading:true,
+  const deepBlue=track(new THREE.MeshStandardMaterial({
+    color:0x265c80,roughness:.5,metalness:.19,side:THREE.DoubleSide,
   }));
-  const glass = track(new THREE.MeshStandardMaterial({
-    color:P3_COLORS.canopy,metalness:.18,roughness:.28,flatShading:true,
+  const glass=track(new THREE.MeshPhysicalMaterial({
+    color:0x133a58,roughness:.14,metalness:.19,clearcoat:1,clearcoatRoughness:.1,
+    emissive:0x0b3554,emissiveIntensity:.08,
   }));
-  const thruster = track(new THREE.MeshStandardMaterial({
-    color:P3_COLORS.thrust,emissive:P3_COLORS.thrust,emissiveIntensity:.92,metalness:0,roughness:.42,
+  const metal=track(new THREE.MeshStandardMaterial({
+    color:0x7d9bac,roughness:.35,metalness:.58,
   }));
-  // 实体宽翼：双侧以不同受光面构成厚度，翼尖圆角靠离散倒角而非复杂贴图。
-  hull(player,[
-    0,.68,-.22,.29,-.43,.13,-1.13,-.30,-1.17,-.45,-.72,-.42,
-    -.41,-.61,0,-.57,.41,-.61,.72,-.42,1.17,-.45,1.13,-.30,.43,.13,.22,.29,
-  ],.23,ceramic,-.09);
-  for(const side of [-1,1]){
-    hull(player,[
-      side*.37,.11,side*.61,-.01,side*1.05,-.32,side*1.08,-.39,
-      side*.75,-.35,side*.42,-.25,
-    ],.055,blue,.17);
-    // 可辨认的外缘翼鳍、后掠双色装甲和两个分离的发动机。
-    box(player,[.075,.27,.18],[side*1.01,-.34,.17],deepBlue,side*.15);
-    dome(player,[.18,.37,.19],[side*.43,-.34,.14],ceramic);
-    dome(player,[.14,.24,.14],[side*.43,-.50,.08],deepBlue);
-    dome(player,[.115,.10,.12],[side*.43,-.61,.12],thruster);
-    box(player,[.15,.06,.05],[side*.43,-.57,.28],blue);
+  const engineLight=track(new THREE.MeshStandardMaterial({
+    color:0x8ffcf2,emissive:0x33d6d1,emissiveIntensity:.88,
+    roughness:.32,metalness:0,
+  }));
+  const place=(geometry:THREE.BufferGeometry,material:THREE.Material,
+    name:string,x=0,y=0,z=0):THREE.Mesh=>{
+    const part=new THREE.Mesh(track(geometry),material);
+    part.name=name;part.position.set(x,y,z);player.add(part);return part;
+  };
+  // One sculpted structural body forms the real nose, shoulder, belly and tapered tail.
+  place(createHullLoft([
+    {y:-.68,radiusX:.12,centerZ:.07,radiusZ:.11},
+    {y:-.46,radiusX:.28,centerZ:.11,radiusZ:.18},
+    {y:-.13,radiusX:.32,centerZ:.14,radiusZ:.24},
+    {y:.28,radiusX:.235,centerZ:.17,radiusZ:.20},
+    {y:.59,radiusX:.105,centerZ:.16,radiusZ:.10},
+    {y:.75,radiusX:.012,centerZ:.13,radiusZ:.018},
+  ],20),ceramic,'continuous-ceramic-fuselage');
+  // Wing cross sections have 6 bevel-edge vertices and top/bottom surfaces.
+  const wingStations=[
+    {x:.24,leadingY:.28,trailingY:-.42,z:.11,thickness:.17},
+    {x:.51,leadingY:.10,trailingY:-.48,z:.08,thickness:.15},
+    {x:.89,leadingY:-.16,trailingY:-.43,z:.04,thickness:.095},
+    {x:1.17,leadingY:-.29,trailingY:-.40,z:.06,thickness:.045},
+  ] as const;
+  for(const side of [-1,1] as const){
+    place(createWingAirfoil(wingStations,side),ceramic,
+      side<0?'left-main-airfoil':'right-main-airfoil');
+    // One deliberate blue inset, not a scatter of decorative machine blocks.
+    place(createWingAirfoil([
+      {x:.38,leadingY:.04,trailingY:-.17,z:.205,thickness:.025},
+      {x:.78,leadingY:-.19,trailingY:-.31,z:.145,thickness:.023},
+      {x:1.10,leadingY:-.31,trailingY:-.365,z:.109,thickness:.014},
+    ],side),blue,side<0?'left-swept-inlay':'right-swept-inlay');
+    const nacelle=place(createHullLoft([
+      {y:-.70,radiusX:.085,centerZ:.105,radiusZ:.105},
+      {y:-.58,radiusX:.16,centerZ:.12,radiusZ:.14},
+      {y:-.23,radiusX:.17,centerZ:.135,radiusZ:.17},
+      {y:.035,radiusX:.09,centerZ:.16,radiusZ:.11},
+    ],14),deepBlue,'engine-pod',side*.45);
+    nacelle.userData.engineSide=side;
+    place(createHullLoft([
+      {y:-.715,radiusX:.105,centerZ:.125,radiusZ:.103},
+      {y:-.685,radiusX:.143,centerZ:.125,radiusZ:.135},
+      {y:-.638,radiusX:.13,centerZ:.125,radiusZ:.12},
+    ],14),metal,'rear-nozzle-rim',side*.45);
+    const glow=new THREE.Mesh(track(new THREE.SphereGeometry(1,16,10)),engineLight);
+    glow.name='engine-core';glow.scale.set(.105,.06,.09);
+    glow.position.set(side*.45,-.702,.13);player.add(glow);
+    const cheek=new THREE.Mesh(track(new THREE.SphereGeometry(1,12,10)),blue);
+    cheek.name='wing-root-cheek';cheek.scale.set(.16,.31,.09);
+    cheek.position.set(side*.29,-.19,.32);player.add(cheek);
   }
-  // 大体量鼓起的机背与奶白色鼻锥；座舱明显高于翼板，旋转可观察厚度。
-  dome(player,[.30,.57,.25],[0,.02,.28],ceramic);
-  dome(player,[.19,.35,.17],[0,.07,.49],glass);
-  dome(player,[.12,.13,.08],[0,.25,.60],blue);
-  hull(player,[0,.73,-.16,.35,-.18,-.11,0,-.24,.18,-.11,.16,.35],
-    .12,ceramic,.39);
-  box(player,[.15,.21,.07],[0,-.39,.38],blue);
+  const canopyFrame=new THREE.Mesh(track(new THREE.SphereGeometry(1,24,14)),deepBlue);
+  canopyFrame.name='raised-canopy-gasket';
+  canopyFrame.scale.set(.23,.37,.157);canopyFrame.position.set(0,.115,.375);
+  player.add(canopyFrame);
+  const canopy=new THREE.Mesh(track(new THREE.SphereGeometry(1,28,16)),glass);
+  canopy.name='single-polished-raised-canopy';
+  canopy.scale.set(.187,.317,.166);canopy.position.set(0,.13,.431);
+  player.add(canopy);
+  // Nose ridge and rear undertray keep a clean readable three-tone hierarchy.
+  place(createHullLoft([
+    {y:.29,radiusX:.105,centerZ:.336,radiusZ:.028},
+    {y:.51,radiusX:.063,centerZ:.285,radiusZ:.034},
+    {y:.73,radiusX:.008,centerZ:.168,radiusZ:.015},
+  ],10),blue,'nose-spine');
+  place(createHullLoft([
+    {y:-.62,radiusX:.19,centerZ:-.09,radiusZ:.03},
+    {y:-.40,radiusX:.23,centerZ:-.105,radiusZ:.045},
+    {y:-.16,radiusX:.20,centerZ:-.10,radiusZ:.035},
+  ],10),deepBlue,'undertray');
+  // The single beveled extrusion is a structural tail plate, not the primary hull.
+  hull(player,[-.22,-.40,-.15,-.60,0,-.54,.15,-.60,.22,-.40],
+    .065,blue,.12);
   player.userData.modelKind='player';
   player.userData.assetSource='src/render/ShipModels.ts#q-player-pivot';
+  player.userData.geometrySource='src/render/P4PlayerGeometry.ts';
   player.traverse(node=>{if(node instanceof THREE.Mesh){node.castShadow=false;node.receiveShadow=false;}});
 
   // P3/B2: 三种原创 Q 版敌机均为可编辑真 3D Mesh，实例化仍按部件而非敌机分配。
