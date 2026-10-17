@@ -12,7 +12,7 @@ import { GalaxyBackdrop } from './GalaxyBackdrop.ts';
 import { RingedPlanet } from './RingedPlanet.ts';
 import { AsteroidField } from './AsteroidField.ts';
 import { ForegroundRocks } from './ForegroundRocks.ts';
-import { P3_COLORS, P3_LIGHTING, installP3Lighting } from './P3Palette.ts';
+import { P3_COLORS, P3_LIGHTING, installP3Lighting, p4LightVariantFromSearch } from './P3Palette.ts';
 import { VISUAL_THEMES, type VisualThemeId } from '../levels/visualThemes.ts';
 
 /** 世界坐标在二维，z 仅为渲染层深度，不参与任何游戏规则。 */
@@ -36,6 +36,7 @@ export class BattlefieldRenderer {
   private readonly playerVisual: THREE.Group;
   private readonly playerMotion = new PlayerShipMotion();
   private readonly composition = compositionFromSearch(window.location.search);
+  private readonly lightVariant = p4LightVariantFromSearch(window.location.search);
   private readonly reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   private readonly modelPreview = (() => {
     const value=new URLSearchParams(window.location.search).get('shipPreview');
@@ -97,7 +98,8 @@ export class BattlefieldRenderer {
     // 镜头只根据视口改变投影尺寸，不改动逻辑世界的宽高或比例。
     this.camera.position.set(0, 0, 50);
     this.camera.lookAt(0, 0, 0);
-    const lights=installP3Lighting(this.scene);
+    const lights=installP3Lighting(this.scene,this.lightVariant);
+    this.host.dataset.p4Lighting=this.lightVariant;
     lights[3].color.setHex(theme.rimTint);
     this.host.dataset.p3LightRig='4';
     this.host.dataset.p3ToneExposure=String(P3_LIGHTING.toneMappingExposure);
