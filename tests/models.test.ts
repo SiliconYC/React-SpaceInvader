@@ -90,3 +90,21 @@ test('P4/A2 连续原创建模：机身/两侧翼型均为独立的有法线三�
   assert.equal(player.position.z,0);
   resources.forEach(r=>r.dispose());
 });
+
+test('P4/A3 Scout 在 24/40 架情况下共用实体翼型与镜头可见单眼',()=>{
+  const resources:Array<THREE.BufferGeometry|THREE.Material>=[];
+  const {enemies}=createShipTemplates(resources);
+  const scout=enemies.scout;
+  const wing=(scout.children as THREE.Mesh[]).filter(x=>x.name.endsWith('airfoil'));
+  assert.equal(wing.length,2);
+  assert.ok(wing.every(x=>x.geometry.type==='BufferGeometry'));
+  assert.ok((scout.children as THREE.Mesh[]).some(x=>x.name==='scout-main-single-optic'));
+  const dims=new THREE.Box3().setFromObject(scout).getSize(new THREE.Vector3());
+  assert.ok(dims.x>1.7&&dims.x<2.1);
+  const m=(scout.children as THREE.Mesh[]).map(x=>new THREE.InstancedMesh(x.geometry,x.material,40));
+  m.forEach(x=>{
+    for(let i=0;i<40;i++)x.setMatrixAt(i,new THREE.Matrix4().makeTranslation(i,0,0));
+    x.dispose();
+  });
+  resources.forEach(x=>x.dispose());
+});

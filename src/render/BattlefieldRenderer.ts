@@ -308,6 +308,10 @@ export class BattlefieldRenderer {
           part.mesh.visible=!isPlayer&&kind===this.modelPreview;
           if (!part.mesh.visible) continue;
           this.tempMatrix.makeTranslation(center.x,center.y,0);
+          if(tilted){
+            this.tempMatrix.multiply(new THREE.Matrix4().makeRotationFromEuler(
+              new THREE.Euler(.19,-.29,.11)));
+          }
           this.tempMatrix.multiply(part.localMatrix);
           part.mesh.count=1;
           part.mesh.setMatrixAt(0,this.tempMatrix);
