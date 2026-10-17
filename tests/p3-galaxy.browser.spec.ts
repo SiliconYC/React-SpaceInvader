@@ -13,11 +13,11 @@ test('P3/C1: WebP 真正通过同源网络下载、在 Three.js GPU 中加载、
   const bytes=await download.body();
   expect(bytes.length).toBeGreaterThan(4000);
   expect(bytes.length).toBeLessThan(300000);
-  const decoded=await page.evaluate(async()=>{
-    const response=await fetch(import.meta.env?.BASE_URL??'/React-SpaceInvader/art/backgrounds/galaxy-v2.webp');
+  const decoded=await page.evaluate(async(url)=>{
+    const response=await fetch(url);
     const bitmap=await createImageBitmap(await response.blob());
     return [bitmap.width,bitmap.height];
-  }).catch(()=>null);
+  },download.url()).catch(()=>null);
   // The network response and Three.js load status, not an imaginary file path, are authoritative.
   if(decoded!==null)expect(decoded).toEqual([1600,900]);
   await page.screenshot({path:info.outputPath('p3-c1-galaxy-desktop.png'),fullPage:true});
