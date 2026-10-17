@@ -15,7 +15,7 @@ function surface(track:Track,color:number,metalness=.16,roughness=.43):THREE.Mes
 }
 function light(track:Track,color:number,glow:number):THREE.MeshPhysicalMaterial{
   return track(new THREE.MeshPhysicalMaterial({
-    color,emissive:glow,emissiveIntensity:.48,roughness:.22,
+    color,emissive:glow,emissiveIntensity:.48,roughness:.32,
     metalness:.12,clearcoat:.66,clearcoatRoughness:.18,
   }));
 }
@@ -58,7 +58,7 @@ export function sculptRaider(track:Track):THREE.Group{
   const pale=surface(track,0xffc3a1,.10,.46);
   const edge=surface(track,0xb94e5e,.28,.39);
   const graphite=surface(track,0x29394e,.30,.45);
-  const lens=surface(track,0x172f49,.20,.17);
+  const lens=surface(track,0x172f49,.20,.30);
   const muzzle=light(track,0xffcc9a,0xff805e);
 
   loft(g,track,[
