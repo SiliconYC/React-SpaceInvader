@@ -59,8 +59,8 @@ export function createWingAirfoil(stations: readonly WingStation[], side:-1|1): 
   }
   for(let j=0;j<stations.length-1;j++)for(let k=0;k<6;k++){
     const a=j*6+k,b=j*6+(k+1)%6,c=(j+1)*6+k,d=(j+1)*6+(k+1)%6;
-    if(side===1)indices.push(a,c,b,b,c,d);
-    else indices.push(a,b,c,b,d,c);
+    if(side===1)indices.push(a,b,c,b,d,c);
+    else indices.push(a,c,b,b,c,d);
   }
   for(const end of [0,stations.length-1]){
     const start=end*6;
