@@ -22,6 +22,7 @@ export function createAsteroidGeometry(seed:number):THREE.BufferGeometry{
 interface Rock { readonly instance:THREE.InstancedMesh;readonly kind:number;readonly count:number }
 /** No game logic, no meshes per asteroid. Stable positions and 4 batched draw calls. */
 export class AsteroidField{
+  private readonly layer: THREE.Group;
   private readonly rocks:Rock[]=[];
   private readonly resources:Array<THREE.BufferGeometry|THREE.Material>=[];
   private readonly matrix=new THREE.Matrix4();
@@ -32,7 +33,8 @@ export class AsteroidField{
   private viewWidth=36;private viewHeight=24;private centerY=0;
   private isPortrait=false;
   readonly totalCount=12;
-  constructor(private readonly layer:THREE.Group){
+  constructor(layer:THREE.Group){
+    this.layer=layer;
     const colors=[0x3d4c6a,0x46516f,0x545875,0x354862];
     const materials=colors.map(hex=>new THREE.MeshStandardMaterial({
       color:hex,flatShading:true,roughness:.93,metalness:.01,
