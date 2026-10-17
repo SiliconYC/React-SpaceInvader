@@ -11,8 +11,8 @@ export interface ShipTemplates {
 export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   const track = <T extends GpuResource>(resource: T): T => { resources.push(resource); return resource; };
   const armor = (color: number, luminous = 0.08) => track(new THREE.MeshStandardMaterial({
-    color, emissive: color, emissiveIntensity: luminous, metalness: .54, roughness: .35,
-    flatShading: false,
+    color, emissive: color, emissiveIntensity: luminous, metalness: .16, roughness: .61,
+    flatShading: true,
   }));
   const gleam = (color: number) => track(new THREE.MeshStandardMaterial({
     color, emissive: color, emissiveIntensity: .95, roughness: .2, metalness: .18,
@@ -101,34 +101,64 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   player.userData.assetSource='src/render/ShipModels.ts#q-player-pivot';
   player.traverse(node=>{if(node instanceof THREE.Mesh){node.castShadow=false;node.receiveShadow=false;}});
 
-  // 侦察机：尖锐三叉翼、单个探测圆顶，识别轮廓：轻、窄、尖。
+  // P3/B2: 三种原创 Q 版敌机均为可编辑真 3D Mesh，实例化仍按部件而非敌机分配。
+  // 侦察机：纤长三叉/燕翼，单中央凸眼和高背甲壳。宽约 1.72 单位。
   const scout = new THREE.Group();
-  hull(scout, [0,-.53,-.25,-.18,-.87,-.41,-.63,.21,-.25,.47,0,.25,
-               .25,.47,.63,.21,.87,-.41,.25,-.18], .24, scoutMetal);
-  hull(scout, [0,.39,-.15,-.14,.15,-.14], .33, dark, .21);
-  dome(scout,[.17,.18,.13],[0,.04,.51],scoutGlow);
+  const scoutPale=armor(0xffd49b,.04);
+  hull(scout,[0,-.54,-.24,-.27,-.83,-.38,-.68,.06,-.32,.37,
+    0,.28,.32,.37,.68,.06,.83,-.38,.24,-.27],.29,scoutMetal,-.07);
+  for(const side of [-1,1]){
+    hull(scout,[side*.20,-.21,side*.36,.23,side*.72,.03,
+      side*.66,-.07,side*.39,-.26],.085,scoutPale,.19);
+    box(scout,[.10,.23,.14],[side*.72,-.25,.23],scoutMetal,side*.16);
+  }
+  dome(scout,[.25,.34,.24],[0,-.06,.27],scoutMetal);
+  dome(scout,[.17,.18,.18],[0,-.12,.47],dark);
+  dome(scout,[.095,.10,.10],[0,-.14,.60],scoutGlow);
+  box(scout,[.13,.08,.09],[0,.27,.32],scoutPale);
 
-  // 袭击机：宽型后掠双翼、两侧突出攻击舱；与 scout 的细尖外形完全不同。
+  // 袭击机：更宽的双钳翼、相互分离的炮舱和下压机鼻，明显不是 Scout 换色。
   const raider = new THREE.Group();
-  hull(raider, [-.91,.38,-.45,.22,-.27,-.38,0,-.6,.27,-.38,.45,.22,
-                .91,.38,.96,-.23,.55,-.48,-.55,-.48,-.96,-.23], .32, raiderMetal);
-  box(raider,[.27,.64,.31],[-.65,-.22,.30],dark,-.12);
-  box(raider,[.27,.64,.31],[.65,-.22,.30],dark,.12);
-  dome(raider,[.28,.20,.18],[0,.07,.54],raiderGlow);
+  const raiderPale=armor(0xffc7af,.04);
+  hull(raider,[-.91,.36,-.48,.30,-.31,-.33,0,-.57,.31,-.33,
+    .48,.30,.91,.36,1.05,-.23,.75,-.43,.35,-.41,0,-.58,
+    -.35,-.41,-.75,-.43,-1.05,-.23],.34,raiderMetal,-.08);
+  for(const side of [-1,1]){
+    hull(raider,[side*.48,.23,side*.88,.23,side*.94,-.15,
+      side*.70,-.31,side*.47,-.23],.10,raiderPale,.23);
+    box(raider,[.25,.51,.32],[side*.72,-.20,.30],dark,side*.12);
+    box(raider,[.14,.34,.20],[side*.72,-.43,.32],raiderMetal);
+    dome(raider,[.12,.14,.095],[side*.72,-.59,.38],raiderGlow);
+  }
+  dome(raider,[.34,.44,.25],[0,-.02,.35],raiderMetal);
+  dome(raider,[.22,.28,.20],[0,-.01,.57],dark);
+  box(raider,[.23,.09,.10],[0,-.49,.36],raiderPale);
 
-  // 守卫机：宽重装甲六边形、中部高起的堡垒 + 双侧护盾与两个发光侧灯。
+  // 守卫机：宽重盾形装甲、双侧厚护肩和高起的发光能量核心。
   const guardian = new THREE.Group();
-  hull(guardian, [-1.02,.43,-1.15,-.18,-.7,-.62,.7,-.62,1.15,-.18,
-                  1.02,.43,.48,.68,-.48,.68], .43, guardianMetal);
-  hull(guardian, [-.46,.44,-.59,-.18,-.25,-.39,.25,-.39,.59,-.18,.46,.44],
-       .31,dark,.44);
-  box(guardian,[.23,.71,.32],[-.91,-.08,.51],guardianMetal);
-  box(guardian,[.23,.71,.32],[.91,-.08,.51],guardianMetal);
-  dome(guardian,[.18,.18,.13],[-.58,.22,.79],guardianGlow);
-  dome(guardian,[.18,.18,.13],[.58,.22,.79],guardianGlow);
+  const guardianPale=armor(0xd5c5ff,.04);
+  const guardianShadow=armor(0x655a9c,.02);
+  const core = gleam(0x79e4ef);
+  hull(guardian,[-1.07,.43,-1.17,-.12,-1.03,-.44,-.55,-.59,
+    0,-.60,.55,-.59,1.03,-.44,1.17,-.12,1.07,.43,.57,.68,-.57,.68],
+    .46,guardianMetal,-.10);
+  for(const side of [-1,1]){
+    hull(guardian,[side*.56,.54,side*1.05,.30,side*1.06,-.30,
+      side*.75,-.42,side*.55,-.15],.16,guardianShadow,.38);
+    hull(guardian,[side*.62,.40,side*.92,.26,side*.89,-.13,
+      side*.61,-.19],.10,guardianPale,.57);
+    box(guardian,[.19,.40,.28],[side*.84,-.18,.49],guardianMetal);
+    dome(guardian,[.11,.14,.10],[side*.87,-.34,.65],guardianGlow);
+  }
+  hull(guardian,[-.41,.44,-.48,-.29,0,-.44,.48,-.29,.41,.44],
+    .24,guardianPale,.44);
+  dome(guardian,[.38,.37,.26],[0,.06,.66],guardianShadow);
+  dome(guardian,[.25,.25,.23],[0,.02,.83],core);
+  dome(guardian,[.13,.13,.105],[-.04,.08,1.03],guardianPale);
 
   for (const [kind, group] of Object.entries({scout,raider,guardian})) {
     group.userData.modelKind=kind;
+    group.userData.assetSource='src/render/ShipModels.ts#'+kind;
     group.traverse(node => { if (node instanceof THREE.Mesh) {node.castShadow=false; node.receiveShadow=false;} });
   }
   return { player, enemies: {scout,raider,guardian} };
