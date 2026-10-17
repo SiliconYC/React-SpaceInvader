@@ -28,8 +28,11 @@ export class CombatFX {
   private emitted=0;
   private armorEmitted=0;
   private lastKind='';
+  private readonly scene:THREE.Group;
+  private readonly world:World2;
 
-  constructor(private readonly scene:THREE.Group,private readonly world:World2){
+  constructor(scene:THREE.Group,world:World2){
+    this.scene=scene;this.world=world;
     // Authored geometry vocabulary: compact flashes, directionally launched hull chips and
     // *thin* local rings; never large opaque quads, smoke, postprocessing or camera shake.
     const spark=new THREE.OctahedronGeometry(.105,0);
