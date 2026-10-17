@@ -5,6 +5,7 @@ import type { Point2, World2 } from '../core/world.ts';
 import { createShipTemplates } from './ShipModels.ts';
 import { CombatFX } from './CombatFX.ts';
 import { combatProjection } from './CombatProjection.ts';
+import { CombatSceneLayers, SCENE_LAYER_ORDER } from './CombatSceneLayers.ts';
 
 /** 世界坐标在二维，z 仅为渲染层深度，不参与任何游戏规则。 */
 export function toDisplayXY(point: Point2, world: World2): THREE.Vector3 {
@@ -14,6 +15,7 @@ export function toDisplayXY(point: Point2, world: World2): THREE.Vector3 {
 export class BattlefieldRenderer {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
+  private readonly layers = new CombatSceneLayers(this.scene);
   private readonly camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
   private readonly world: Readonly<World2>;
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
@@ -70,38 +72,10 @@ export class BattlefieldRenderer {
     key.position.set(-8, 12, 16);
     this.scene.add(key);
 
-    const boardGeometry = new THREE.BoxGeometry(this.world.width, this.world.height, 0.4);
-    const boardMaterial = new THREE.MeshStandardMaterial({
-      color: 0x0c1928, metalness: 0.12, roughness: 0.86,
-    });
-    this.resources.push(boardGeometry, boardMaterial);
-    const board = new THREE.Mesh(boardGeometry, boardMaterial);
-    board.position.z = -0.35;
-    this.scene.add(board);
-
-    // 默认仅用几处低对比角标提示边界，不使用高亮外框。
+    // Full-viewport sky, no box backboard, marker corners or engineering frame.
+    this.scene.background = new THREE.Color(0x07152b);
     const halfW = this.world.width / 2;
     const halfH = this.world.height / 2;
-    const corner = Math.min(this.world.width, this.world.height) * 0.055;
-    const corners: THREE.Vector3[] = [];
-    for (const sx of [-1, 1]) {
-      for (const sy of [-1, 1]) {
-        const x = sx * halfW;
-        const y = sy * halfH;
-        corners.push(
-          new THREE.Vector3(x - sx * corner, y, 0.02),
-          new THREE.Vector3(x, y, 0.02),
-          new THREE.Vector3(x, y, 0.02),
-          new THREE.Vector3(x, y - sy * corner, 0.02),
-        );
-      }
-    }
-    const markerGeometry = new THREE.BufferGeometry().setFromPoints(corners);
-    const markerMaterial = new THREE.LineBasicMaterial({
-      color: 0x638097, transparent: true, opacity: 0.36,
-    });
-    this.resources.push(markerGeometry, markerMaterial);
-    this.scene.add(new THREE.LineSegments(markerGeometry, markerMaterial));
 
     // 网格只供主动打开调试模式时核对二维位置。
     const gridPoints: THREE.Vector3[] = [];
@@ -120,12 +94,12 @@ export class BattlefieldRenderer {
     this.resources.push(gridGeometry, gridMaterial);
     this.grid = new THREE.LineSegments(gridGeometry, gridMaterial);
     this.grid.visible = false;
-    this.scene.add(this.grid);
+    this.layers.combat.add(this.grid);
 
     // 原创 3D 舰船与三种不同体积和轮廓的敌机；同型号克隆共享 GPU 资源。
     const templates = createShipTemplates(this.resources);
     this.playerMesh = templates.player;
-    this.scene.add(this.playerMesh);
+    this.layers.combat.add(this.playerMesh);
     // Three meshes are static assets; InstancedMesh allows 24 scouts (and more)
     // to share the same few GPU draw calls, independent of total alive instances.
     for(const kind of ['scout','raider','guardian'] as const){
@@ -138,7 +112,7 @@ export class BattlefieldRenderer {
         instances.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
         instances.frustumCulled=false;
         this.enemyBatches[kind].push({mesh:instances,localMatrix:part.matrix.clone()});
-        this.scene.add(instances);
+        this.layers.combat.add(instances);
       }
     }
     this.scene.add(new THREE.HemisphereLight(0xb5d9ef, 0x10192a, .55));
@@ -151,14 +125,14 @@ export class BattlefieldRenderer {
     for (let i = 0; i < 72; i++) {
       const h1 = ((i*701+173) % 997)/997;
       const h2 = ((i*479+67) % 991)/991;
-      points.push((h1-.5)*this.world.width, (h2-.5)*this.world.height, -.05);
+      points.push((h1-.5)*this.world.width, (h2-.5)*this.world.height, -12);
     }
     const dust = new THREE.BufferGeometry();
     dust.setAttribute('position',new THREE.Float32BufferAttribute(points,3));
     const dustMat = new THREE.PointsMaterial({color:0x365672,size:.055,transparent:true,opacity:.3,
       sizeAttenuation:true,depthWrite:false});
     this.resources.push(dust,dustMat);
-    this.scene.add(new THREE.Points(dust,dustMat));
+    this.layers.starfield.add(new THREE.Points(dust,dustMat));
 
     this.bulletGeometry = new THREE.CapsuleGeometry(0.10, 0.35, 4, 8);
     this.bulletMaterial = new THREE.MeshStandardMaterial({
@@ -170,7 +144,7 @@ export class BattlefieldRenderer {
       metalness: 0.08, roughness: 0.3,
     });
     this.resources.push(this.bulletGeometry, this.bulletMaterial, this.enemyBulletMaterial);
-    this.effects = new CombatFX(this.scene,this.world);
+    this.effects = new CombatFX(this.layers.combat,this.world);
 
     // 模型类型可调整外观，但队列数量、坐标和种类只来自纯逻辑快照.
     this.syncEnemies(snapshot);
@@ -178,6 +152,7 @@ export class BattlefieldRenderer {
     this.host.dataset.worldWidth = String(this.world.width);
     this.host.dataset.worldHeight = String(this.world.height);
     this.host.dataset.debugGrid = 'off';
+    this.host.dataset.sceneLayers = SCENE_LAYER_ORDER.join(',');
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(this.host);
     this.resize();
@@ -218,6 +193,7 @@ export class BattlefieldRenderer {
     this.host.dataset.cameraSpanX = layout.spanX.toFixed(3);
     this.host.dataset.cameraSpanY = layout.spanY.toFixed(3);
     this.host.dataset.cameraCenterY = layout.centerY.toFixed(3);
+    this.layers.refresh(this.world,this.camera,width,height,coarse);
   }
 
   render(state: GameSnapshot): void {
@@ -243,6 +219,10 @@ export class BattlefieldRenderer {
     this.host.dataset.gamePhase = state.phase;
     this.host.dataset.outcome = state.outcome ?? '';
     this.effects.update(state.phase,this.camera);
+    this.layers.refresh(this.world,this.camera,this.host.clientWidth,this.host.clientHeight,
+      window.matchMedia?.('(pointer:coarse)').matches ?? false);
+    this.host.dataset.foregroundCount=String(this.layers.foregroundCount);
+    this.host.dataset.foregroundVisible=String(this.layers.visibleForegroundCount);
     this.host.dataset.fxActive = String(this.effects.active);
     this.host.dataset.fxEmitted = String(this.effects.events);
     this.host.dataset.fxArmorEvents=String(this.effects.armorEvents);
@@ -267,7 +247,7 @@ export class BattlefieldRenderer {
     const ids = new Set(state.projectiles.map(projectile => projectile.id));
     for (const [id, mesh] of this.projectileMeshes) {
       if (!ids.has(id)) {
-        this.scene.remove(mesh);
+        this.layers.combat.remove(mesh);
         this.projectileMeshes.delete(id);
       }
     }
@@ -275,7 +255,7 @@ export class BattlefieldRenderer {
       let mesh = this.projectileMeshes.get(projectile.id);
       if (!mesh) {
         mesh = new THREE.Mesh(this.bulletGeometry, this.bulletMaterial);
-        this.scene.add(mesh);
+        this.layers.combat.add(mesh);
         this.projectileMeshes.set(projectile.id, mesh);
       }
       mesh.position.copy(toDisplayXY(projectile.position, this.world));
@@ -288,7 +268,7 @@ export class BattlefieldRenderer {
     const ids = new Set(state.enemyProjectiles.map(bullet => bullet.id));
     for (const [id, mesh] of this.enemyProjectileMeshes) {
       if (!ids.has(id)) {
-        this.scene.remove(mesh);
+        this.layers.combat.remove(mesh);
         this.enemyProjectileMeshes.delete(id);
       }
     }
@@ -296,7 +276,7 @@ export class BattlefieldRenderer {
       let mesh = this.enemyProjectileMeshes.get(bullet.id);
       if (!mesh) {
         mesh = new THREE.Mesh(this.bulletGeometry, this.enemyBulletMaterial);
-        this.scene.add(mesh);
+        this.layers.combat.add(mesh);
         this.enemyProjectileMeshes.set(bullet.id, mesh);
       }
       mesh.position.copy(toDisplayXY(bullet.position, this.world));
@@ -341,13 +321,14 @@ export class BattlefieldRenderer {
     this.renderer.domElement.removeEventListener('webglcontextrestored',this.restoreHandler);
     for (const kind of ['scout','raider','guardian'] as const){
       for(const part of this.enemyBatches[kind]){
-        this.scene.remove(part.mesh);
+        this.layers.combat.remove(part.mesh);
         part.mesh.dispose(); // instance buffers only; shared materials/geometries disposed below
       }
     }
     this.projectileMeshes.clear();
     this.enemyProjectileMeshes.clear();
     this.effects.dispose();
+    this.layers.dispose();
     for (const resource of this.resources) resource.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
