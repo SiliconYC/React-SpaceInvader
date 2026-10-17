@@ -85,6 +85,7 @@ jobs:
             test-results/**/mobile-gpu-performance.json
             test-results/**/p3-*.json
             test-results/**/p4-*.json
+            test-results/**/video.webm
             artifacts/p3-asset-audit.json
           retention-days: 7
           if-no-files-found: ignore

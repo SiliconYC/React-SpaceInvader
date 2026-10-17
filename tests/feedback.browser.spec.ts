@@ -50,7 +50,9 @@ test('玩家受击与敌机击毁具不同颜色形状反馈且无无限资源�
   const assets=await stage.getAttribute('data-gpu-assets');
   await page.getByRole('button',{name:'开始',exact:true}).click();
   await expect.poll(async()=>Number(await stage.getAttribute('data-lives')),{timeout:9000}).toBeLessThan(3);
-  await expect.poll(async()=>stage.getAttribute('data-fx-kind')).toBe('damage');
+  // A subsequent game-finished event may correctly replace the last effect with 'defeat'.
+  // Assert the authoritative damage feedback was emitted, not that it stayed last.
+  await expect.poll(async()=>Number(await stage.getAttribute('data-fx-damage-events'))).toBeGreaterThanOrEqual(1);
   await page.screenshot({path:info.outputPath('fx-hit.png'),fullPage:true});
   await expect.poll(async()=>Number(await stage.getAttribute('data-fx-active')),{timeout:2000}).toBeLessThanOrEqual(72);
   await expect(stage).toHaveAttribute('data-gpu-assets',assets ?? '');
