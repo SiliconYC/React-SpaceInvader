@@ -8,7 +8,9 @@ test('四种真实不规则低模有唯一轮廓，避免照片/屏幕贴纸',()
   const sizes=new Set<string>();
   for(let seed=17;seed<21;seed++){
     const geometry=createAsteroidGeometry(seed);
-    assert.ok(geometry instanceof THREE.IcosahedronGeometry);
+    assert.ok(geometry instanceof THREE.BufferGeometry);
+    assert.equal(geometry.index,null,'原创独立切面应能分面受光');
+    assert.ok(geometry.getAttribute('color').count>=60);
     const a=geometry.getAttribute('position');
     assert.ok(a.count>=60);
     const points=new THREE.Box3().setFromBufferAttribute(a);
@@ -20,17 +22,17 @@ test('四种真实不规则低模有唯一轮廓，避免照片/屏幕贴纸',()
 test('12 块陨石固定只有四个实例批次，正常/竖屏/暂停/复位可重现',()=>{
   const layer=new THREE.Group();
   const asteroids=new AsteroidField(layer);
-  assert.equal(asteroids.batches,4);
-  assert.equal(layer.children.length,4);
-  assert.equal(asteroids.totalCount,12);
+  assert.equal(asteroids.batches,5);
+  assert.equal(layer.children.length,5);
+  assert.equal(asteroids.totalCount,10);
   for(const obj of layer.children){
     assert.ok(obj instanceof THREE.InstancedMesh);
-    assert.equal((obj as THREE.InstancedMesh).count,3);
+    assert.equal((obj as THREE.InstancedMesh).count,2);
     assert.equal(((obj as THREE.InstancedMesh).material as THREE.MeshStandardMaterial).map,null);
   }
   const layout=combatProjection({width:36,height:24},1280,720,false);
   asteroids.resize(layout,1280,720);
-  assert.equal(asteroids.visibleCount,12);
+  assert.equal(asteroids.visibleCount,10);
   const mesh=layer.children[0] as THREE.InstancedMesh;
   const before=new THREE.Matrix4();mesh.getMatrixAt(0,before);
   asteroids.update(300);
