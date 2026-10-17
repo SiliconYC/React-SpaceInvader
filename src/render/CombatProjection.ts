@@ -27,7 +27,7 @@ export function combatProjection(world: Readonly<World2>, width: number, height:
   const fovDegrees = 18;
   return {
     spanX: spanY * aspect, spanY,
-    centerY: coarse ? -2.05 : composition === 'stage' ? -0.3 : 0,
+    centerY: coarse ? -2.05 : 0,
     fovDegrees,
     cameraDistance: spanY / (2 * Math.tan((fovDegrees * Math.PI) / 360)),
   };
