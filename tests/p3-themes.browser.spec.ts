@@ -13,7 +13,7 @@ test('P3/E1: changing only JSON swaps entire visual palette, preserves XY gamepl
   await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
   await expect(stage).toHaveAttribute('data-visual-theme','nebula-blue');
   await expect(stage).toHaveAttribute('data-galaxy','loaded');
-  await expect(stage).toHaveAttribute('data-galaxy-url',/\/React-SpaceInvader\/art\/backgrounds\/galaxy-v2\.webp$/);
+  await expect(stage).toHaveAttribute('data-galaxy-url',/\/React-SpaceInvader\/art\/backgrounds\/galaxy-p4-veil\.webp$/);
   const original=await stage.evaluate(el=>({geometry:el.dataset.gpuGeometries,texture:el.dataset.gpuTextures,world:el.dataset.worldWidth}));
   await page.screenshot({path:info.outputPath('p3-e1-default-blue.png'),fullPage:true});
   await page.getByTestId('level-select').selectOption('crossfire');
