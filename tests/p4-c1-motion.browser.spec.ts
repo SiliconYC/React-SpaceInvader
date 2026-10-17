@@ -48,7 +48,7 @@ test('P4/C1 真实 WebGL：起飞→巡航→反向→制动→连射→暂停�
   await page.screenshot({path:info.outputPath('p4-c1-mobile-landscape.png')});
   await page.setViewportSize({width:390,height:844});
   await page.screenshot({path:info.outputPath('p4-c1-mobile-portrait.png')});
-  await page.getByRole('button',{name:'重新开始'}).click();
+  await page.getByRole('button',{name:'重置',exact:true}).click();
   expect(errors).toEqual([]);
 });
 test('P4/C1 减少动态效果：不改变运动/射击规则',async({page})=>{
