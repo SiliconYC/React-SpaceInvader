@@ -13,7 +13,9 @@ test('P4/B2 真贴图 + 真球环：同条件旧版/两套新银河对照',async
       const file=variant==='legacy'?'galaxy-v2.webp':'galaxy-p4-'+variant+'.webp';
       const response=page.waitForResponse(r=>r.url().endsWith('/art/backgrounds/'+file));
       await page.goto('./?galaxy='+variant);
-      expect((await response).ok()).toBe(true);
+      const imageResponse=await response;
+      expect([200,304]).toContain(imageResponse.status()); // 304 means the same Git image is cached.
+      // The Three.js loaded signal is authoritative for both 200 and conditional 304.
       await expect(stage).toHaveAttribute('data-galaxy','loaded');
       await expect(stage).toHaveAttribute('data-galaxy-variant',variant);
       await expect(stage).toHaveAttribute('data-planet-meshes','3');
