@@ -111,6 +111,13 @@ export class ForegroundRocks {
     return {left:minX-3,top:minY-3,right:maxX+3,bottom:maxY+3};
   }
 
+  setTint(tint:number):void{
+    const color=new THREE.Color(tint);
+    for(const rock of this.rocks){
+      const mat=rock.mesh.material as THREE.MeshStandardMaterial;
+      mat.color.multiply(color);
+    }
+  }
   get visibleCount():number {return this.layers.visibleForegroundCount;}
   dispose():void {
     for(const rock of this.rocks){
