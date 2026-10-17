@@ -21,6 +21,7 @@ export class BattlefieldRenderer {
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
   private readonly grid: THREE.LineSegments;
   private readonly playerMesh: THREE.Group;
+  private readonly modelPreview = new URLSearchParams(window.location.search).get('shipPreview') === 'player';
   /** Each distinct ship-part geometry is drawn once per kind, regardless of enemy count. */
   private readonly enemyBatches: Record<EnemyKind, Array<{
     readonly mesh: THREE.InstancedMesh; readonly localMatrix: THREE.Matrix4
@@ -227,6 +228,18 @@ export class BattlefieldRenderer {
     this.host.dataset.gamePhase = state.phase;
     this.host.dataset.outcome = state.outcome ?? '';
     this.effects.update(state.phase,this.camera);
+    if (this.modelPreview) {
+      const tilted = new URLSearchParams(window.location.search).get('shipAngle') === 'tilt';
+      this.playerMesh.rotation.set(tilted ? .22 : 0, tilted ? -.24 : 0, tilted ? .08 : 0);
+      // Explicit inspection mode only: full-resolution screenshot of the real WebGL ship.
+      this.camera.position.x=point.x;
+      this.camera.position.y=point.y;
+      this.camera.lookAt(point.x,point.y,0);
+      this.camera.zoom=5;
+      this.camera.updateProjectionMatrix();
+      this.camera.updateMatrixWorld(true);
+      for (const batch of Object.values(this.enemyBatches)) for (const part of batch) part.mesh.visible=false;
+    }
     this.layers.refresh(this.world,this.camera,this.host.clientWidth,this.host.clientHeight,
       window.matchMedia?.('(pointer:coarse)').matches ?? false);
     this.host.dataset.foregroundCount=String(this.layers.foregroundCount);
@@ -244,6 +257,7 @@ export class BattlefieldRenderer {
     this.host.dataset.drawCalls=String(this.renderer.info.render.calls);
     this.host.dataset.gpuGeometries=String(this.renderer.info.memory.geometries);
     this.host.dataset.gpuTextures=String(this.renderer.info.memory.textures);
+    this.host.dataset.shipPreview=this.modelPreview?'player':'off';
   }
 
   /** All feedback is initiated only by unique authoritative GameEvent records. */
