@@ -505,3 +505,25 @@ h1 { margin: 0; font-size: clamp(18px, 2vw, 24px); line-height: 1.2; font-weight
 @media(prefers-reduced-motion:reduce){
   .touch-key,.play-actions button{transition:none}
 }
+
+
+/* P4/D1 visual screenshot correction: combat buttons may NEVER cover the ship.
+   Place secondary in-game actions in the right peripheral safe band. */
+.game-shell[data-ui-phase='running'] .play-actions {
+  left:auto;right:max(18px,env(safe-area-inset-right));top:max(92px,calc(env(safe-area-inset-top) + 77px));
+  bottom:auto;transform:none;flex-direction:column;gap:7px;
+}
+.game-shell[data-ui-phase='running'] .play-actions button {
+  min-height:38px;min-width:66px;padding:8px 12px;border-radius:11px;
+  background:rgba(7,23,40,.69);color:#eaf7fa;border-color:rgba(184,222,238,.38);
+  font-size:12px;box-shadow:none;
+}
+.game-shell[data-ui-phase='running'] .play-actions button:hover{
+  background:rgba(30,72,95,.86);
+}
+@media(pointer:coarse) and (max-height:520px){
+  .game-shell[data-ui-phase='running'] .play-actions {
+    top:max(91px,calc(env(safe-area-inset-top) + 75px));
+    bottom:auto;right:max(12px,env(safe-area-inset-right));
+  }
+}
