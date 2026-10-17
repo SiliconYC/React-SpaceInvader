@@ -31,6 +31,7 @@ export class BattlefieldRenderer {
   private readonly foregroundRocks: ForegroundRocks;
   private readonly camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
   private readonly cameraDirector = new CameraDirector();
+  private readonly suspendDirector = () => this.cameraDirector.suspend();
   private baseCameraY = 0;
   private baseCameraDistance = 50;
   private readonly world: Readonly<World2>;
@@ -100,6 +101,8 @@ export class BattlefieldRenderer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
     host.dataset.pixelRatio=this.renderer.getPixelRatio().toFixed(2);
     host.dataset.webglContext='ready';
+    document.addEventListener('visibilitychange',this.suspendDirector);
+    window.addEventListener('blur',this.suspendDirector);
     this.renderer.domElement.addEventListener('webglcontextlost',this.lostHandler);
     this.renderer.domElement.addEventListener('webglcontextrestored',this.restoreHandler);
     this.renderer.setClearColor(0x050913, 1);
@@ -547,6 +550,8 @@ export class BattlefieldRenderer {
   }
 
   dispose(): void {
+    document.removeEventListener('visibilitychange',this.suspendDirector);
+    window.removeEventListener('blur',this.suspendDirector);
     this.observer.disconnect();
     this.renderer.domElement.removeEventListener('webglcontextlost',this.lostHandler);
     this.renderer.domElement.removeEventListener('webglcontextrestored',this.restoreHandler);
