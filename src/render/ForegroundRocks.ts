@@ -24,7 +24,6 @@ export class ForegroundRocks {
   private readonly world: Readonly<World2>;
   private readonly rocks: Rock[] = [];
   private readonly layers: CombatSceneLayers;
-  private readonly corners = Array.from({ length: 8 }, () => new THREE.Vector3());
   private readonly projected = new THREE.Vector3();
   readonly count = 4;
 
