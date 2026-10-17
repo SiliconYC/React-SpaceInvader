@@ -236,7 +236,7 @@ export class BattlefieldRenderer {
       const tilted=new URLSearchParams(window.location.search).get('shipAngle')==='tilt';
       this.playerMesh.visible=isPlayer;
       this.playerMesh.rotation.set(isPlayer&&tilted ? .22:0,isPlayer&&tilted?-.24:0,
-        isPlayer&&tilted?.08:0);
+        isPlayer && tilted ? .08 : 0);
       const selectedEnemy=isPlayer?undefined:state.enemies.find(e=>e.type===this.modelPreview);
       const center=isPlayer?point:selectedEnemy
         ? toDisplayXY(selectedEnemy.position,state.world):new THREE.Vector3();
