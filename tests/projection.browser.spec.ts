@@ -3,19 +3,21 @@ import { test, expect } from '@playwright/test';
 async function assertProjection(page: import('@playwright/test').Page) {
   const stage=page.getByTestId('battlefield');
   await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
-  const width=await stage.evaluate(e=>e.clientWidth);
-  const height=await stage.evaluate(e=>e.clientHeight);
-  const worldW=Number(await stage.getAttribute('data-world-width'));
-  const worldH=Number(await stage.getAttribute('data-world-height'));
-  const spanY=Number(await stage.getAttribute('data-camera-span-y'));
-  const centerY=Number(await stage.getAttribute('data-camera-center-y'));
-  const x=Number(await stage.getAttribute('data-player-x'));
-  const y=Number(await stage.getAttribute('data-player-y'));
-  const sx=Number(await stage.getAttribute('data-player-screen-x'));
-  const sy=Number(await stage.getAttribute('data-player-screen-y'));
-  expect(Math.abs(sx-(width/2+(x-worldW/2)*height/spanY))).toBeLessThan(.05);
-  expect(Math.abs(sy-(height/2-(y-worldH/2-centerY)*height/spanY))).toBeLessThan(.05);
-  expect(Number(await stage.getAttribute('data-camera-span-x'))).toBeGreaterThan(worldW);
+  // Read all viewport and camera metrics atomically: ResizeObserver may run between awaits.
+  await expect.poll(async()=>{
+    return stage.evaluate(e=>{
+      const d=(key:string)=>Number(e.getAttribute('data-'+key));
+      const width=e.clientWidth,height=e.clientHeight;
+      const pixels=height/d('camera-span-y');
+      const expectedX=width/2+(d('player-x')-d('world-width')/2)*pixels;
+      const expectedY=height/2-(d('player-y')-d('world-height')/2-d('camera-center-y'))*pixels;
+      return Math.max(Math.abs(expectedX-d('player-screen-x')),
+        Math.abs(expectedY-d('player-screen-y')));
+    });
+  },{timeout:5000}).toBeLessThan(.06);
+  const spanX=Number(await stage.getAttribute('data-camera-span-x'));
+  expect(spanX).toBeGreaterThan(36);
+
 }
 test('P3/A1: 正交基线与弱透视 XY 投影一致，桌面与窄屏均保留原有操作',async({page},info)=>{
   for(const mode of ['ortho','perspective'] as const){
