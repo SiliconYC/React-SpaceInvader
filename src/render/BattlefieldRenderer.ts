@@ -48,9 +48,9 @@ export class BattlefieldRenderer {
   constructor(private readonly host: HTMLDivElement, snapshot: GameSnapshot,
     private readonly onContext?: (lost:boolean)=>void) {
     this.world = snapshot.world;
-    // ?projection=ortho is an opt-in visual comparison, not a gameplay setting.
-    this.camera = new URLSearchParams(window.location.search).get('projection') === 'ortho'
-      ? new THREE.OrthographicCamera() : new THREE.PerspectiveCamera();
+    // Default to orthographic after real Chromium A/B comparison; ?projection=perspective enables the distant 18° alternative.
+    this.camera = new URLSearchParams(window.location.search).get('projection') === 'perspective'
+      ? new THREE.PerspectiveCamera() : new THREE.OrthographicCamera();
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
     const coarse=window.matchMedia?.('(pointer:coarse)').matches ?? false;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
