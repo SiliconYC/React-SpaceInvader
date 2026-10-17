@@ -27,6 +27,7 @@ export class CombatFX {
   private readonly center=new THREE.Vector3();
   private emitted=0;
   private armorEmitted=0;
+  private damageEmitted=0;
   private lastKind='';
   private readonly scene:THREE.Group;
   private readonly world:World2;
@@ -106,6 +107,7 @@ export class CombatFX {
     }
     this.emitted++;
     if(kind==='armor')this.armorEmitted++;
+    if(kind==='damage')this.damageEmitted++;
     this.lastKind=kind;
   }
 
@@ -113,7 +115,7 @@ export class CombatFX {
     for(const event of events){
       if(event.type==='game-reset'){
         this.clear();this.seen.clear();this.keys.length=0;
-        this.emitted=0;this.armorEmitted=0;this.lastKind='';
+        this.emitted=0;this.armorEmitted=0;this.damageEmitted=0;this.lastKind='';
         continue;
       }
       if(event.type==='phase-changed'&&event.to==='paused'){
@@ -189,6 +191,7 @@ export class CombatFX {
   get allocatedMeshes():number{return this.allocated;}
   get reusableMeshes():number{return this.spare.length;}
   get armorEvents():number{return this.armorEmitted;}
+  get damageEvents():number{return this.damageEmitted;}
   get events():number{return this.emitted;}
   get kind():string{return this.lastKind;}
   get batchCount():number{return KINDS.length;}
