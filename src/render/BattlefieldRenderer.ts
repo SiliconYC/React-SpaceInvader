@@ -346,6 +346,7 @@ export class BattlefieldRenderer {
     this.host.dataset.fxReusable = String(this.effects.reusableMeshes);
     this.host.dataset.fxEmitted = String(this.effects.events);
     this.host.dataset.fxArmorEvents=String(this.effects.armorEvents);
+    this.host.dataset.fxDamageEvents=String(this.effects.damageEvents);
     this.host.dataset.fxKind = this.effects.kind;
     this.host.dataset.fxBatches=String(this.effects.batchCount);
     this.host.dataset.projectilePool=String(this.sparePlayerShots.length+
