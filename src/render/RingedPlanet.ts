@@ -21,7 +21,7 @@ export class RingedPlanet {
       const lane=Math.min(3,Math.max(0,Math.floor((latitude+1)*2)));
       temp.setHex(SHADE[lane]);
       const modulation=.93+.06*Math.sin(i*1.319);
-      for(let j=0;j<3;j++)for(let k=0;k<3;k++)colors[(i+j)*3+k]=temp.getComponent(k)*modulation;
+      for(let j=0;j<3;j++)for(let k=0;k<3;k++)colors[(i+j)*3+k]=[temp.r,temp.g,temp.b][k]*modulation;
     }
     geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
     const bodyMaterial=new THREE.MeshStandardMaterial({
@@ -56,7 +56,7 @@ export class RingedPlanet {
   }
   resize(layout:CombatProjection,width:number,height:number):void{
     const portrait=width/height<.9;
-    const radius=Math.min(portrait?1.65:2.8,layout.spanY*(portrait?.065:.105));
+    const radius=Math.min(portrait?1.65:2.8,layout.spanY*(portrait ? .065 : .105));
     this.group.scale.setScalar(radius);
     // Decorative sphere is behind gameplay in true depth, and deliberately displaced to the upper-right.
     this.group.position.set(layout.spanX*.43,layout.centerY+layout.spanY*.32,-18);
