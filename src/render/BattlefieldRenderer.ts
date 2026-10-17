@@ -21,7 +21,10 @@ export class BattlefieldRenderer {
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
   private readonly grid: THREE.LineSegments;
   private readonly playerMesh: THREE.Group;
-  private readonly modelPreview = new URLSearchParams(window.location.search).get('shipPreview') === 'player';
+  private readonly modelPreview = (() => {
+    const value=new URLSearchParams(window.location.search).get('shipPreview');
+    return value==='player'||value==='scout'||value==='raider'||value==='guardian' ? value : null;
+  })();
   /** Each distinct ship-part geometry is drawn once per kind, regardless of enemy count. */
   private readonly enemyBatches: Record<EnemyKind, Array<{
     readonly mesh: THREE.InstancedMesh; readonly localMatrix: THREE.Matrix4
@@ -229,16 +232,32 @@ export class BattlefieldRenderer {
     this.host.dataset.outcome = state.outcome ?? '';
     this.effects.update(state.phase,this.camera);
     if (this.modelPreview) {
-      const tilted = new URLSearchParams(window.location.search).get('shipAngle') === 'tilt';
-      this.playerMesh.rotation.set(tilted ? .22 : 0, tilted ? -.24 : 0, tilted ? .08 : 0);
-      // Explicit inspection mode only: full-resolution screenshot of the real WebGL ship.
-      this.camera.position.x=point.x;
-      this.camera.position.y=point.y;
-      this.camera.lookAt(point.x,point.y,0);
+      const isPlayer=this.modelPreview==='player';
+      const tilted=new URLSearchParams(window.location.search).get('shipAngle')==='tilt';
+      this.playerMesh.visible=isPlayer;
+      this.playerMesh.rotation.set(isPlayer&&tilted ? .22:0,isPlayer&&tilted?-.24:0,
+        isPlayer && tilted ? .08 : 0);
+      const selectedEnemy=isPlayer?undefined:state.enemies.find(e=>e.type===this.modelPreview);
+      const center=isPlayer?point:selectedEnemy
+        ? toDisplayXY(selectedEnemy.position,state.world):new THREE.Vector3();
+      // Optional diagnostic close-up of an ACTUAL InstancedMesh part from Git source.
+      for (const kind of ['scout','raider','guardian'] as const) {
+        for (const part of this.enemyBatches[kind]) {
+          part.mesh.visible=!isPlayer&&kind===this.modelPreview;
+          if (!part.mesh.visible) continue;
+          this.tempMatrix.makeTranslation(center.x,center.y,0);
+          this.tempMatrix.multiply(part.localMatrix);
+          part.mesh.count=1;
+          part.mesh.setMatrixAt(0,this.tempMatrix);
+          part.mesh.instanceMatrix.needsUpdate=true;
+        }
+      }
+      this.camera.position.x=center.x;
+      this.camera.position.y=center.y;
+      this.camera.lookAt(center.x,center.y,0);
       this.camera.zoom=5;
       this.camera.updateProjectionMatrix();
       this.camera.updateMatrixWorld(true);
-      for (const batch of Object.values(this.enemyBatches)) for (const part of batch) part.mesh.visible=false;
     }
     this.layers.refresh(this.world,this.camera,this.host.clientWidth,this.host.clientHeight,
       window.matchMedia?.('(pointer:coarse)').matches ?? false);
@@ -257,7 +276,7 @@ export class BattlefieldRenderer {
     this.host.dataset.drawCalls=String(this.renderer.info.render.calls);
     this.host.dataset.gpuGeometries=String(this.renderer.info.memory.geometries);
     this.host.dataset.gpuTextures=String(this.renderer.info.memory.textures);
-    this.host.dataset.shipPreview=this.modelPreview?'player':'off';
+    this.host.dataset.shipPreview=this.modelPreview??'off';
   }
 
   /** All feedback is initiated only by unique authoritative GameEvent records. */

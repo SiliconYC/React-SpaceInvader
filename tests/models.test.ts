@@ -45,3 +45,26 @@ test('P3 玩家模型为多层可编辑 Three.js 实体，尺寸与 XY 命中盒
   assert.ok(player.position.equals(before),'三轴姿态只能影响可视模型，不更新逻辑位置');
   resources.forEach(resource=>resource.dispose());
 });
+
+test('P3 三种 Q 敌机灰度剪影不同，真实厚度且每类复用源网格',()=>{
+  const resources: Array<THREE.BufferGeometry|THREE.Material>=[];
+  const {enemies}=createShipTemplates(resources);
+  const dims=(ship:THREE.Group)=>new THREE.Box3().setFromObject(ship).getSize(new THREE.Vector3());
+  const [s,r,g]=[dims(enemies.scout),dims(enemies.raider),dims(enemies.guardian)];
+  assert.ok(s.x<r.x && r.x<g.x,'Scout/突击/守卫必须有不同横向轮廓');
+  assert.ok(g.z>r.z && r.z>s.z,'厚重程度要真正来自实体 z 几何');
+  for(const kind of ['scout','raider','guardian'] as const) {
+    const group=enemies[kind];
+    const meshes=group.children as THREE.Mesh[];
+    assert.ok(meshes.length>=7,'多个共享大部件形成真实多面体');
+    assert.ok(meshes.every(m=>m instanceof THREE.Mesh));
+    assert.ok(meshes.every(m=>(m.material as THREE.MeshStandardMaterial).map==null));
+    assert.equal(group.userData.assetSource,'src/render/ShipModels.ts#'+kind);
+    const instanced=meshes.map(m=>new THREE.InstancedMesh(m.geometry,m.material,256));
+    const originalCount=resources.length;
+    for(let i=0;i<24;i++)instanced.forEach(m=>m.setMatrixAt(i,new THREE.Matrix4().makeTranslation(i,0,0)));
+    assert.equal(resources.length,originalCount,'实例化不能每架分配贴图、材质或网格');
+    instanced.forEach(m=>m.dispose());
+  }
+  resources.forEach(item=>item.dispose());
+});
