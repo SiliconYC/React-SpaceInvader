@@ -29,7 +29,7 @@ export class CombatFX {
   private armorEmitted = 0;
   private lastKinds = '';
 
-  constructor(private readonly scene: THREE.Scene, private readonly world: World2) {
+  constructor(private readonly scene: THREE.Group, private readonly world: World2) {
     this.geometries = [new THREE.IcosahedronGeometry(.13,0),new THREE.RingGeometry(.32,.4,12)];
     const material = (color:number,opacity:number) => new THREE.MeshBasicMaterial({
       color, transparent:true, opacity, depthWrite:false, side:THREE.DoubleSide,

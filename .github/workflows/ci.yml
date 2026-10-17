@@ -27,6 +27,7 @@ jobs:
         with:
           name: p2-baseline-${{ github.sha }}
           path: |
+            test-results/**/p3-*.png
             test-results/**/desktop-baseline.png
             test-results/**/narrow-baseline.png
             test-results/**/fx-*.png
