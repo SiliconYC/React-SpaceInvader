@@ -3,6 +3,7 @@ import type { GameSnapshot, GameEvent } from '../core/engine.ts';
 import type { EnemyKind, EnemyState } from '../core/level.ts';
 import type { Point2, World2 } from '../core/world.ts';
 import { createShipTemplates } from './ShipModels.ts';
+import { enemyVisualPose } from './EnemyShipMotion.ts';
 import { CombatFX } from './CombatFX.ts';
 import { combatProjection } from './CombatProjection.ts';
 import { CombatSceneLayers, SCENE_LAYER_ORDER } from './CombatSceneLayers.ts';
@@ -30,6 +31,12 @@ export class BattlefieldRenderer {
     readonly mesh: THREE.InstancedMesh; readonly localMatrix: THREE.Matrix4
   }>> = {scout:[],raider:[],guardian:[]};
   private readonly tempMatrix = new THREE.Matrix4();
+  private readonly enemyPoseMatrices:Record<EnemyKind,THREE.Matrix4[]>={
+    scout:[],raider:[],guardian:[],
+  };
+  private readonly poseEuler=new THREE.Euler();
+  private readonly poseRotation=new THREE.Matrix4();
+  private readonly poseLift=new THREE.Matrix4();
   private lastPlayerPoint: THREE.Vector3 | null = null;
   private readonly projectileMeshes = new Map<number, THREE.Mesh>();
   private readonly enemyProjectileMeshes = new Map<number, THREE.Mesh>();
@@ -331,20 +338,37 @@ export class BattlefieldRenderer {
   private syncEnemies(state: GameSnapshot): void {
     const active:Record<EnemyKind,EnemyState[]>={scout:[],raider:[],guardian:[]};
     for(const enemy of state.enemies)active[enemy.type].push(enemy);
+    const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     for(const kind of ['scout','raider','guardian'] as const){
-      const enemies=active[kind];
+      const enemies=active[kind],positions=this.enemyPoseMatrices[kind];
+      // Compose once per enemy, then multiply each actual InstancedMesh part transform.
+      for(let index=0;index<enemies.length;index++){
+        const enemy=enemies[index];
+        const pose=enemyVisualPose(kind,enemy.id,state.tick,state.formationDirection,state.phase,reduced);
+        this.poseEuler.set(pose.pitch,pose.yaw,pose.roll,'XYZ');
+        this.poseRotation.makeRotationFromEuler(this.poseEuler);
+        this.poseLift.makeTranslation(0,0,pose.lift);
+        const matrix=positions[index] ?? (positions[index]=new THREE.Matrix4());
+        matrix.makeTranslation(enemy.position.x-state.world.width/2,
+          enemy.position.y-state.world.height/2,0);
+        matrix.multiply(this.poseRotation).multiply(this.poseLift);
+      }
       for(const part of this.enemyBatches[kind]){
         const instances=part.mesh;
         instances.count=enemies.length;
         for(let index=0;index<enemies.length;index++){
-          const {x,y}=enemies[index].position;
-          this.tempMatrix.makeTranslation(x-state.world.width/2,y-state.world.height/2,0);
-          this.tempMatrix.multiply(part.localMatrix);
+          this.tempMatrix.copy(positions[index]).multiply(part.localMatrix);
           instances.setMatrixAt(index,this.tempMatrix);
         }
         if(enemies.length>0)instances.instanceMatrix.needsUpdate=true;
       }
     }
+    const first=state.enemies[0];
+    const firstPose=first?enemyVisualPose(first.type,first.id,state.tick,
+      state.formationDirection,state.phase,reduced):null;
+    this.host.dataset.enemyVisualRoll=(firstPose?.roll??0).toFixed(5);
+    this.host.dataset.enemyVisualYaw=(firstPose?.yaw??0).toFixed(5);
+    this.host.dataset.enemyVisualLift=(firstPose?.lift??0).toFixed(5);
     this.host.dataset.enemyCount = String(state.enemies.length);
     this.host.dataset.enemyHp = String(state.enemies[0]?.hp ?? '');
     this.host.dataset.enemyMaxHp = String(state.enemies[0]?.maxHp ?? '');
