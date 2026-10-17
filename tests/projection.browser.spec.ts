@@ -39,7 +39,7 @@ test('P3/A1: 正交基线与弱透视 XY 投影一致，桌面与窄屏均保留
   }
 });
 test('P3/A1: 触控竖屏透视不改变 XY 瞄准中心',async({browser},info)=>{
-  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2});
+  const context=await browser.newContext({baseURL:info.project.use.baseURL as string,viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2});
   try{
     const page=await context.newPage();
     await page.goto('./');
