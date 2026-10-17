@@ -4,6 +4,7 @@ import type { EnemyKind, EnemyState } from '../core/level.ts';
 import type { Point2, World2 } from '../core/world.ts';
 import { createShipTemplates } from './ShipModels.ts';
 import { enemyVisualPose } from './EnemyShipMotion.ts';
+import { PlayerShipMotion } from './PlayerShipMotion.ts';
 import { CombatFX } from './CombatFX.ts';
 import { combatProjection } from './CombatProjection.ts';
 import { CombatSceneLayers, SCENE_LAYER_ORDER } from './CombatSceneLayers.ts';
@@ -22,6 +23,9 @@ export class BattlefieldRenderer {
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
   private readonly grid: THREE.LineSegments;
   private readonly playerMesh: THREE.Group;
+  private readonly playerVisual: THREE.Group;
+  private readonly playerMotion = new PlayerShipMotion();
+  private readonly reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   private readonly modelPreview = (() => {
     const value=new URLSearchParams(window.location.search).get('shipPreview');
     return value==='player'||value==='scout'||value==='raider'||value==='guardian' ? value : null;
@@ -110,7 +114,11 @@ export class BattlefieldRenderer {
 
     // 原创 3D 舰船与三种不同体积和轮廓的敌机；同型号克隆共享 GPU 资源。
     const templates = createShipTemplates(this.resources);
-    this.playerMesh = templates.player;
+    // Authoritative XY anchor never rotates; only the child render model moves in 3D.
+    this.playerMesh = new THREE.Group();
+    this.playerMesh.name='authoritative-player-xy';
+    this.playerVisual = templates.player;
+    this.playerMesh.add(this.playerVisual);
     this.layers.combat.add(this.playerMesh);
     // Three meshes are static assets; InstancedMesh allows 24 scouts (and more)
     // to share the same few GPU draw calls, independent of total alive instances.
@@ -223,6 +231,14 @@ export class BattlefieldRenderer {
     }
     const point = toDisplayXY(state.player.position, state.world);
     this.playerMesh.position.copy(point);
+    const pose=this.playerMotion.update(state.player.position.x,state.tick,state.phase,performance.now(),this.reducedMotion);
+    this.playerVisual.rotation.set(pose.pitch,pose.yaw,pose.roll);
+    this.playerVisual.position.set(0,pose.offsetY,pose.offsetZ);
+    this.host.dataset.visualRoll=pose.roll.toFixed(5);
+    this.host.dataset.visualYaw=pose.yaw.toFixed(5);
+    this.host.dataset.visualPitch=pose.pitch.toFixed(5);
+    this.host.dataset.visualBob=pose.offsetZ.toFixed(5);
+    this.host.dataset.visualRecoil=pose.recoil.toFixed(5);
     // Project with the actual Three.js camera, rather than an unrelated CSS approximation.
     this.lastPlayerPoint = point;
     this.updatePlayerScreenPosition();
@@ -242,8 +258,9 @@ export class BattlefieldRenderer {
       const isPlayer=this.modelPreview==='player';
       const tilted=new URLSearchParams(window.location.search).get('shipAngle')==='tilt';
       this.playerMesh.visible=isPlayer;
-      this.playerMesh.rotation.set(isPlayer&&tilted ? .22:0,isPlayer&&tilted?-.24:0,
+      this.playerVisual.rotation.set(isPlayer&&tilted ? .22:0,isPlayer&&tilted?-.24:0,
         isPlayer && tilted ? .08 : 0);
+      if(isPlayer)this.playerVisual.position.set(0,0,0);
       const selectedEnemy=isPlayer?undefined:state.enemies.find(e=>e.type===this.modelPreview);
       const center=isPlayer?point:selectedEnemy
         ? toDisplayXY(selectedEnemy.position,state.world):new THREE.Vector3();
@@ -289,6 +306,10 @@ export class BattlefieldRenderer {
   /** All feedback is initiated only by unique authoritative GameEvent records. */
   consumeEvents(events: readonly GameEvent[],state?:GameSnapshot):void {
     if(state)this.effects.consume(events,state);
+    for(const event of events){
+      if(event.type==='game-reset')this.playerMotion.reset();
+      else if(event.type==='shot-fired')this.playerMotion.shot(this.reducedMotion);
+    }
   }
 
   private syncProjectiles(state: GameSnapshot): void {
