@@ -6,7 +6,7 @@ import type {GameSnapshot,GameEvent} from '../src/core/engine.ts';
 const snap={world:{width:36,height:20},player:{position:{x:18,y:2}}} as GameSnapshot;
 const opening:GameEvent={type:'phase-changed',from:'ready',to:'running',tick:0};
 const wave:GameEvent={type:'wave-started',tick:120,wave:2,total:2,waveId:'wave-2'};
-const victory:GameEvent={type:'game-finished',tick:150,phase:'won',outcome:'all-enemies-defeated'};
+const victory:GameEvent={type:'game-finished',tick:150,phase:'won',outcome:'cleared'};
 const defeat:GameEvent={type:'game-finished',tick:150,phase:'lost',outcome:'line-breached'};
 
 test('P4 D2: opening dolly returns to exactly neutral camera without any rule time',()=>{
