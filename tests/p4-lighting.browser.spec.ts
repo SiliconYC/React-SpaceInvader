@@ -59,5 +59,6 @@ test('P4/A4 同一状态两个灯光方案、四种屏幕完整正常战斗 WebG
     platform:'GitHub Actions Chromium; WebGL may use SwiftShader; NOT a physical phone benchmark',
     fps,measurements:metrics,
   },null,2));
+  console.log('P4 A4 software-WebGL metrics:',JSON.stringify({fps,measurements:metrics}));
   expect(errors).toEqual([]);
 });
