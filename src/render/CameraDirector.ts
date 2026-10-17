@@ -90,6 +90,8 @@ export class CameraDirector {
     }
   }
 
+  suspend():void {this.lastFrame=null;}
+
   reset():void {this.cue=null;this.elapsed=0;this.lastFrame=null;this.current=REST;this.playerOffsetX=0;}
   get stage():CameraCue{return this.current.cue;}
 }
