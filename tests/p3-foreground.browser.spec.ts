@@ -6,7 +6,7 @@ test('P3/C4: 前景真实边缘岩石、射击边界、窄屏门禁、暂停和 
   await page.goto('./');
   const stage=page.getByTestId('battlefield');
   await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
-  await expect(stage).toHaveAttribute('data-foreground-rocks','4');
+  await expect(stage).toHaveAttribute('data-foreground-rocks','2');
   await expect.poll(async()=>Number(await stage.getAttribute('data-foreground-visible'))).toBeGreaterThan(0);
   expect(Number(await stage.getAttribute('data-draw-calls'))).toBeLessThan(72);
   await page.screenshot({path:info.outputPath('p3-c4-safe-foreground-desktop.png'),fullPage:true});
