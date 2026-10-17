@@ -12,3 +12,9 @@
 **概念稿 ≠ 源码模型 ≠ Chromium 游戏截图。** 正式检查必须打开运行页面和实际截图。玩家命中盒 `PLAYER_WIDTH`、`PLAYER_HEIGHT`、`PLAYER_SPEED` 与子弹生成器不由本文件定义，因此三轴翻转不会改变规则。
 
 全部敌机保持 `src/render/BattlefieldRenderer.ts` 中的逐型号逐部件 `InstancedMesh`：同一型号 24 架仍共用一组几何/材质，正常页面无额外贴图（预期 `data-gpu-textures=0`）。`?shipPreview=scout|raider|guardian` 是真实 WebGL 近景验收视角，不是离线概念画。实际模型几何尺寸与守卫可受两次击中等**逻辑完全解耦**。
+
+## #40 玩家动画层契约
+
+`src/render/PlayerShipMotion.ts` 只读取权威快照的 x、tick、phase 与展示时钟，从不发送游戏命令或重新计算规则碰撞。渲染器中 `authoritative-player-xy` 根节点始终放在 `toDisplayXY(state.player.position)` 的平面 `z=0`；内层 `playerVisual` 才允许滚转、偏航、俯仰、轻度 bob 和射击瞬间短后坐。停顿时冻结，重置时清零，媒体设置减少动态效果时完全静止。运动幅度限制：最大滚转约 12°、偏航约 5°、视觉 bob 小于 0.05 世界单位。
+
+真实浏览器双向运动截图：`p3-b3-player-bank-right.png`、`p3-b3-player-bank-left.png`（PR 的 Chromium 工件），并有暂停、减少动态效果和逻辑射击起点回归测试。没有额外贴图、模型资产与碰撞类型变更。

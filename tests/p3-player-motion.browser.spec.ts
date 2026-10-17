@@ -1,0 +1,41 @@
+import {test,expect} from '@playwright/test';
+
+test('P3/B3: 玩家可观察真实三轴倾斜、回正/暂停、触发后坐、重置不残留',async({page},info)=>{
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('./');const field=page.getByTestId('battlefield');
+  await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
+  const roll=async()=>Number(await field.getAttribute('data-visual-roll'));
+  const yaw=async()=>Number(await field.getAttribute('data-visual-yaw'));
+  await page.getByRole('button',{name:'开始',exact:true}).click();
+  const y=await field.getAttribute('data-player-y');
+  await page.keyboard.down('ArrowRight');
+  await expect.poll(roll).toBeLessThan(-.03);
+  await expect.poll(yaw).toBeGreaterThan(.01);
+  await page.screenshot({path:info.outputPath('p3-b3-player-bank-right.png'),fullPage:true});
+  await page.keyboard.up('ArrowRight');
+  await expect.poll(async()=>Math.abs(await roll())).toBeLessThan(.025);
+  await page.keyboard.down('ArrowLeft');
+  await expect.poll(roll).toBeGreaterThan(.03);
+  await page.screenshot({path:info.outputPath('p3-b3-player-bank-left.png'),fullPage:true});
+  await page.keyboard.up('ArrowLeft');
+  await page.keyboard.down('Space');
+  await expect.poll(async()=>Number(await field.getAttribute('data-visual-recoil'))).toBeGreaterThan(.01);
+  await page.keyboard.up('Space');
+  await page.getByRole('button',{name:'暂停'}).click();
+  const frozen=await field.getAttribute('data-visual-roll');
+  await page.waitForTimeout(250);
+  expect(Number(await field.getAttribute('data-visual-roll'))).toBeCloseTo(Number(frozen),4);
+  await page.getByRole('button',{name:'重置'}).click();
+  await expect.poll(roll).toBe(0);
+  await expect(field).toHaveAttribute('data-player-y',y!);
+  expect(errors).toEqual([]);
+});
+test('P3/B3: 系统减少动态效果时，玩家保持完全稳定',async({page})=>{
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.goto('./');const field=page.getByTestId('battlefield');
+  await page.getByRole('button',{name:'开始',exact:true}).click();
+  await page.keyboard.down('ArrowLeft');await page.waitForTimeout(250);
+  await expect(field).toHaveAttribute('data-visual-roll','0.00000');
+  await expect(field).toHaveAttribute('data-visual-bob','0.00000');
+  await page.keyboard.up('ArrowLeft');
+});
