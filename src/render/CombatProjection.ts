@@ -1,6 +1,11 @@
 import type { Point2, World2 } from '../core/world.ts';
 
-/** Render-only layout: every XY point is on the same focal plane. */
+/** 两套真实 Three.js 摄影构图，互不改变世界坐标与碰撞。 */
+export type BattleComposition = 'stage' | 'breathing';
+export function compositionFromSearch(search: string): BattleComposition {
+  return new URLSearchParams(search).get('composition') === 'breathing' ? 'breathing' : 'stage';
+}
+/** Render-only layout: every XY point stays on the same z=0 focal plane. */
 export interface CombatProjection {
   readonly spanX: number;
   readonly spanY: number;
@@ -8,17 +13,26 @@ export interface CombatProjection {
   readonly fovDegrees: number;
   readonly cameraDistance: number;
 }
-export function combatProjection(world: Readonly<World2>, width: number, height: number, coarse: boolean): CombatProjection {
+export function combatProjection(world: Readonly<World2>, width: number, height: number, coarse: boolean,
+  composition: BattleComposition = 'stage'): CombatProjection {
   if (width <= 0 || height <= 0) throw new RangeError('Viewport must be positive');
   const aspect = width / height;
-  const spanY = Math.max(world.height + (coarse ? 7 : 2.2), (world.width + 2.2) / aspect);
+  // Stage: the fleet is the subject. Breathing: a deliberately wider, quieter A/B alternative.
+  // The long/short dimensions are derived from the *same* scalar: no stretching of XY physics.
+  const safeX = composition === 'stage' ? 2.6 : 8;
+  const safeY = composition === 'stage' ? 2.8 : 6.4;
+  const coarseBottomSpace = coarse ? (composition === 'stage' ? 7.4 : 9) : 0;
+  const spanY = Math.max(world.height + safeY + coarseBottomSpace,
+    (world.width + safeX) / aspect);
   const fovDegrees = 18;
   return {
-    spanX: spanY * aspect, spanY, centerY: coarse ? -2.2 : 0, fovDegrees,
+    spanX: spanY * aspect, spanY,
+    centerY: coarse ? -2.05 : 0,
+    fovDegrees,
     cameraDistance: spanY / (2 * Math.tan((fovDegrees * Math.PI) / 360)),
   };
 }
-/** Pixel-space contract for the XY plane (origin: top-left). Both cameras MUST match. */
+/** Pixel-space contract for XY (origin: top-left), shared by both camera types. */
 export function projectBattlePoint(point: Point2, world: Readonly<World2>,
   layout: CombatProjection, width: number, height: number): Point2 {
   const pixelsPerUnit = height / layout.spanY;

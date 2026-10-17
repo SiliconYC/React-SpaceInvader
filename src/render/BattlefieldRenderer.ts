@@ -6,7 +6,7 @@ import { createShipTemplates } from './ShipModels.ts';
 import { enemyVisualPose } from './EnemyShipMotion.ts';
 import { PlayerShipMotion } from './PlayerShipMotion.ts';
 import { CombatFX } from './CombatFX.ts';
-import { combatProjection } from './CombatProjection.ts';
+import { combatProjection, compositionFromSearch } from './CombatProjection.ts';
 import { CombatSceneLayers, SCENE_LAYER_ORDER } from './CombatSceneLayers.ts';
 import { GalaxyBackdrop } from './GalaxyBackdrop.ts';
 import { RingedPlanet } from './RingedPlanet.ts';
@@ -35,6 +35,7 @@ export class BattlefieldRenderer {
   private readonly playerMesh: THREE.Group;
   private readonly playerVisual: THREE.Group;
   private readonly playerMotion = new PlayerShipMotion();
+  private readonly composition = compositionFromSearch(window.location.search);
   private readonly reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   private readonly modelPreview = (() => {
     const value=new URLSearchParams(window.location.search).get('shipPreview');
@@ -209,7 +210,8 @@ export class BattlefieldRenderer {
     const width = Math.max(this.host.clientWidth, 1);
     const height = Math.max(this.host.clientHeight, 1);
     const coarse = window.matchMedia?.('(pointer:coarse)').matches ?? false;
-    const layout = combatProjection(this.world, width, height, coarse);
+    const layout = combatProjection(this.world, width, height, coarse, this.composition);
+    this.host.dataset.composition=this.composition;
     const isPerspective = this.camera instanceof THREE.PerspectiveCamera;
     const distance = isPerspective ? layout.cameraDistance : 50;
     this.camera.position.set(0, layout.centerY, distance);
