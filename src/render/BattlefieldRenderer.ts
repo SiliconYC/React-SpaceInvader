@@ -4,6 +4,7 @@ import type { EnemyKind, EnemyState } from '../core/level.ts';
 import type { Point2, World2 } from '../core/world.ts';
 import { createShipTemplates } from './ShipModels.ts';
 import { CombatFX } from './CombatFX.ts';
+import { combatProjection } from './CombatProjection.ts';
 
 /** 世界坐标在二维，z 仅为渲染层深度，不参与任何游戏规则。 */
 export function toDisplayXY(point: Point2, world: World2): THREE.Vector3 {
@@ -13,7 +14,7 @@ export function toDisplayXY(point: Point2, world: World2): THREE.Vector3 {
 export class BattlefieldRenderer {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
-  private readonly camera = new THREE.OrthographicCamera();
+  private readonly camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
   private readonly world: Readonly<World2>;
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
   private readonly grid: THREE.LineSegments;
@@ -44,6 +45,9 @@ export class BattlefieldRenderer {
   constructor(private readonly host: HTMLDivElement, snapshot: GameSnapshot,
     private readonly onContext?: (lost:boolean)=>void) {
     this.world = snapshot.world;
+    // ?projection=ortho is an opt-in visual comparison, not a gameplay setting.
+    this.camera = new URLSearchParams(window.location.search).get('projection') === 'ortho'
+      ? new THREE.OrthographicCamera() : new THREE.PerspectiveCamera();
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
     const coarse=window.matchMedia?.('(pointer:coarse)').matches ?? false;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
@@ -188,23 +192,32 @@ export class BattlefieldRenderer {
   resize(): void {
     const width = Math.max(this.host.clientWidth, 1);
     const height = Math.max(this.host.clientHeight, 1);
-    const aspect = width / height;
-    const coarse=window.matchMedia?.('(pointer:coarse)').matches ?? false;
-    const viewHeight = Math.max(this.world.height + (coarse ? 7 : 2.2), (this.world.width + 2.2) / aspect);
-    const centerY = coarse ? -2.2 : 0;
-    this.camera.position.set(0,centerY,50);
-    this.camera.lookAt(0,centerY,0);
-    const viewWidth = viewHeight * aspect;
-    this.camera.left = -viewWidth / 2;
-    this.camera.right = viewWidth / 2;
-    this.camera.top = viewHeight / 2;
-    this.camera.bottom = -viewHeight / 2;
-    this.camera.near = 0.1;
-    this.camera.far = 100;
+    const coarse = window.matchMedia?.('(pointer:coarse)').matches ?? false;
+    const layout = combatProjection(this.world, width, height, coarse);
+    const isPerspective = this.camera instanceof THREE.PerspectiveCamera;
+    const distance = isPerspective ? layout.cameraDistance : 50;
+    this.camera.position.set(0, layout.centerY, distance);
+    this.camera.lookAt(0, layout.centerY, 0);
+    if (this.camera instanceof THREE.PerspectiveCamera) {
+      this.camera.fov = layout.fovDegrees;
+      this.camera.aspect = width / height;
+    } else {
+      this.camera.left = -layout.spanX / 2;
+      this.camera.right = layout.spanX / 2;
+      this.camera.top = layout.spanY / 2;
+      this.camera.bottom = -layout.spanY / 2;
+    }
+    this.camera.near = .1;
+    this.camera.far = Math.max(distance + 150, 200);
     this.camera.updateProjectionMatrix();
-    if(!this.contextLost)this.renderer.setSize(width, height, false);
-    this.host.dataset.cameraSpanX = viewWidth.toFixed(3);
-    this.host.dataset.cameraSpanY = viewHeight.toFixed(3);
+    this.camera.updateMatrixWorld(true);
+    if (!this.contextLost) this.renderer.setSize(width, height, false);
+    this.host.dataset.cameraProjection = isPerspective ? 'perspective' : 'orthographic';
+    this.host.dataset.cameraFov = isPerspective ? String(layout.fovDegrees) : '0';
+    this.host.dataset.cameraDistance = distance.toFixed(3);
+    this.host.dataset.cameraSpanX = layout.spanX.toFixed(3);
+    this.host.dataset.cameraSpanY = layout.spanY.toFixed(3);
+    this.host.dataset.cameraCenterY = layout.centerY.toFixed(3);
   }
 
   render(state: GameSnapshot): void {
@@ -214,6 +227,10 @@ export class BattlefieldRenderer {
     }
     const point = toDisplayXY(state.player.position, state.world);
     this.playerMesh.position.copy(point);
+    // Project with the actual Three.js camera, rather than an unrelated CSS approximation.
+    const projected = point.clone().project(this.camera);
+    this.host.dataset.playerScreenX = ((projected.x + 1) * .5 * this.host.clientWidth).toFixed(3);
+    this.host.dataset.playerScreenY = ((1 - projected.y) * .5 * this.host.clientHeight).toFixed(3);
     this.host.dataset.playerX = state.player.position.x.toFixed(4);
     this.host.dataset.playerY = state.player.position.y.toFixed(4);
     this.syncEnemies(state);

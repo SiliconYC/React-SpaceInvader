@@ -114,7 +114,7 @@ export class CombatFX {
     }
   }
   /** Called in existing render() only. Pausing drops effects rather than leaving ghosts. */
-  update(phase:GameSnapshot['phase'],camera:THREE.OrthographicCamera):void{
+  update(phase:GameSnapshot['phase'],camera:THREE.OrthographicCamera | THREE.PerspectiveCamera):void{
     const now=performance.now();
     if(phase==='paused')this.clear();
     for(let i=this.pool.length-1;i>=0;i--){
