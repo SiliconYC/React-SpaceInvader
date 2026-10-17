@@ -61,7 +61,7 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   const player=new THREE.Group();
   player.name='q-player-pivot';
   const ceramic=track(new THREE.MeshPhysicalMaterial({
-    color:0xf0f6ef,roughness:.42,metalness:.06,clearcoat:.32,clearcoatRoughness:.4,
+    color:P3_COLORS.ceramic,roughness:.42,metalness:.06,clearcoat:.32,clearcoatRoughness:.4,
   }));
   const blue=track(new THREE.MeshStandardMaterial({
     color:0x4daed1,roughness:.42,metalness:.13,side:THREE.DoubleSide,
@@ -70,7 +70,7 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
     color:0x265c80,roughness:.5,metalness:.19,side:THREE.DoubleSide,
   }));
   const glass=track(new THREE.MeshPhysicalMaterial({
-    color:0x133a58,roughness:.14,metalness:.19,clearcoat:1,clearcoatRoughness:.1,
+    color:0x133a58,roughness:.28,metalness:.19,clearcoat:1,clearcoatRoughness:.1,
     emissive:0x0b3554,emissiveIntensity:.08,
   }));
   const metal=track(new THREE.MeshStandardMaterial({
