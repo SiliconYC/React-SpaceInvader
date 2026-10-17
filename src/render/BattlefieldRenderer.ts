@@ -229,6 +229,8 @@ export class BattlefieldRenderer {
     this.host.dataset.outcome = state.outcome ?? '';
     this.effects.update(state.phase,this.camera);
     if (this.modelPreview) {
+      const tilted = new URLSearchParams(window.location.search).get('shipAngle') === 'tilt';
+      this.playerMesh.rotation.set(tilted ? .22 : 0, tilted ? -.24 : 0, tilted ? .08 : 0);
       // Explicit inspection mode only: full-resolution screenshot of the real WebGL ship.
       this.camera.position.x=point.x;
       this.camera.position.y=point.y;
