@@ -1,0 +1,31 @@
+name: P4 银河图片离线构建（仅素材分支一次性运行）
+on:
+  push:
+    branches: [feat-p4-b2-celestial-art-77]
+    paths:
+      - scripts/art/generate_p4_galaxy.py
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  paint-and-commit:
+    if: github.ref == 'refs/heads/feat-p4-b2-celestial-art-77'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat-p4-b2-celestial-art-77
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'numpy==2.3.3' 'pillow==11.3.0'
+      - run: python scripts/art/generate_p4_galaxy.py
+      - name: 提交实际生成的 PNG + WebP 二进制素材
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/art/backgrounds/galaxy-p4-*.png public/art/backgrounds/galaxy-p4-*.webp
+          if ! git diff --cached --quiet; then
+            git commit -m "art(#77): archive generated source PNG and runtime WebP nebula twins"
+            git push origin HEAD:feat-p4-b2-celestial-art-77
+          fi
