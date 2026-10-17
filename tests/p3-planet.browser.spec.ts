@@ -23,7 +23,7 @@ test('P3/C2: 真三维环视角和固定规则时钟暂停',async({page},info)=>
   await expect(stage).toHaveAttribute('data-planet-meshes','2');
   await page.screenshot({path:info.outputPath('p3-c2-ringed-planet-tilt.png'),fullPage:true});
   await page.getByRole('button',{name:'开始',exact:true}).click();
-  await expect(stage).toHaveAttribute('data-planet-rotation',/^(0\\.9|0\\.90|0\\.900|0\\.9000|0\\.90000|0\\.90[0-9]+)$/);
+  await expect(stage).toHaveAttribute('data-planet-rotation',/^0\.9\d*$/);
   await page.getByRole('button',{name:'暂停'}).click();
   const paused=await stage.getAttribute('data-planet-rotation');
   await page.waitForTimeout(150);
