@@ -12,7 +12,8 @@ import { GalaxyBackdrop } from './GalaxyBackdrop.ts';
 import { RingedPlanet } from './RingedPlanet.ts';
 import { AsteroidField } from './AsteroidField.ts';
 import { ForegroundRocks } from './ForegroundRocks.ts';
-import { P3_COLORS, P3_LIGHTING, installP3Lighting } from './P3Palette.ts';
+import { P3_LIGHTING, installP3Lighting } from './P3Palette.ts';
+import { VISUAL_THEMES, type VisualThemeId } from '../levels/visualThemes.ts';
 
 /** 世界坐标在二维，z 仅为渲染层深度，不参与任何游戏规则。 */
 export function toDisplayXY(point: Point2, world: World2): THREE.Vector3 {
@@ -70,8 +71,11 @@ export class BattlefieldRenderer {
   get isContextLost():boolean{return this.contextLost;}
 
   constructor(private readonly host: HTMLDivElement, snapshot: GameSnapshot,
-    private readonly onContext?: (lost:boolean)=>void) {
+    private readonly onContext?: (lost:boolean)=>void,
+    themeId:VisualThemeId='nebula-blue') {
     this.world = snapshot.world;
+    const theme=VISUAL_THEMES[themeId];
+    this.host.dataset.visualTheme=theme.id;
     // Default to orthographic after real Chromium A/B comparison; ?projection=perspective enables the distant 18° alternative.
     this.camera = new URLSearchParams(window.location.search).get('projection') === 'perspective'
       ? new THREE.PerspectiveCamera() : new THREE.OrthographicCamera();
@@ -92,19 +96,23 @@ export class BattlefieldRenderer {
     // 镜头只根据视口改变投影尺寸，不改动逻辑世界的宽高或比例。
     this.camera.position.set(0, 0, 50);
     this.camera.lookAt(0, 0, 0);
-    installP3Lighting(this.scene);
+    const lights=installP3Lighting(this.scene);
+    lights[3].color.setHex(theme.rimTint);
     this.host.dataset.p3LightRig='4';
     this.host.dataset.p3ToneExposure=String(P3_LIGHTING.toneMappingExposure);
 
     // Full-viewport sky, no box backboard, marker corners or engineering frame.
-    this.scene.background = new THREE.Color(P3_COLORS.space);
-    this.galaxy = new GalaxyBackdrop(this.layers.starfield, this.host);
+    this.scene.background = new THREE.Color(theme.sky);
+    this.galaxy = new GalaxyBackdrop(this.layers.starfield, this.host, theme.galaxyTint);
     this.asteroids = new AsteroidField(this.layers.environment);
+    this.asteroids.setTint(theme.asteroidTint);
     this.foregroundRocks = new ForegroundRocks(this.layers,this.world);
+    this.foregroundRocks.setTint(theme.foregroundTint);
     this.host.dataset.foregroundRocks = String(this.foregroundRocks.count);
     this.host.dataset.asteroidBatches=String(this.asteroids.batches);
     this.planet = new RingedPlanet(this.layers.celestial,
       new URLSearchParams(window.location.search).get('planetInspect') === 'side');
+    this.planet.setTint(theme.planetTint);
     this.host.dataset.planetMeshes=String(this.planet.meshes);
     const halfW = this.world.width / 2;
     const halfH = this.world.height / 2;
