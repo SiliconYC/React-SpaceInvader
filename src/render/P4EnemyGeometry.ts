@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {createHullLoft,createWingAirfoil} from './P4PlayerGeometry.ts';
+import {P3_COLORS} from './P3Palette.ts';
 
 /**
  * P4/B1 原创敌机的可编辑造型源。每个零件只在模板创建时生成一次。
@@ -54,7 +55,7 @@ function eye(group:THREE.Group,track:Track,mat:THREE.Material,name:string,
  */
 export function sculptRaider(track:Track):THREE.Group{
   const g=new THREE.Group();g.name='raider-p4-scarab';
-  const shell=surface(track,0xf07f6c);
+  const shell=surface(track,P3_COLORS.raider);
   const pale=surface(track,0xffc3a1,.10,.46);
   const edge=surface(track,0xb94e5e,.28,.39);
   const graphite=surface(track,0x29394e,.30,.45);
@@ -117,7 +118,7 @@ export function sculptRaider(track:Track):THREE.Group{
  */
 export function sculptGuardian(track:Track):THREE.Group{
   const g=new THREE.Group();g.name='guardian-p4-fortress';
-  const body=surface(track,0x7b7cbf,.20,.42);
+  const body=surface(track,P3_COLORS.guardian,.20,.42);
   const polished=surface(track,0xb7b3e0,.11,.39);
   const shadow=surface(track,0x4b4d85,.23,.51);
   const steel=surface(track,0x34475f,.36,.47);
