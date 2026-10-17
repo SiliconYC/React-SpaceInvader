@@ -103,7 +103,9 @@ test('重复切关与重置，低开销 WebGL 对象有界；记录实际软件 
     expect(datum.drawCalls).toBeGreaterThan(0);
     // Before instancing the same 24-scout workload measured 95 calls
     // (CI 38951320989). With shared InstancedMesh primitives this should be much lower.
-    // C group adds at most 2 planet + 4 asteroid batches + 2 guarded foreground draws.\n    // Keep an explicit bounded draw-call budget instead of the obsolete P2-only threshold.\n    expect(datum.drawCalls).toBeLessThan(64);
+    // C group adds at most 2 planet + 4 asteroid batches + 2 guarded foreground draws.
+    // Keep an explicit bounded draw-call budget instead of the obsolete P2-only threshold.
+    expect(datum.drawCalls).toBeLessThan(64);
     expect(datum.geometries).toBeLessThan(100);
     expect(datum.textures).toBeLessThan(30);
     expect(datum.effects).toBeLessThanOrEqual(72);
