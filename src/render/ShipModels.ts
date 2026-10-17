@@ -161,6 +161,14 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   const scout=new THREE.Group();
   const scoutPale=armor(0xffdfad,.025);
   const scoutShadow=armor(0xb96a43,.025);
+  // P4 ceramic/plastic studio shading on clean custom bevel surfaces, not faceted glow.
+  for(const material of [scoutMetal,scoutPale,scoutShadow]){
+    material.flatShading=false;
+    material.roughness=.48;
+    material.metalness=.12;
+    material.emissiveIntensity=.018;
+    material.needsUpdate=true;
+  }
   const scoutOptic=track(new THREE.MeshPhysicalMaterial({
     color:0x102d43,roughness:.28,metalness:.28,clearcoat:.95,clearcoatRoughness:.12,
     emissive:0x102d43,emissiveIntensity:.06,

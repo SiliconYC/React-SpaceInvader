@@ -23,3 +23,16 @@ test('P3/D1 palette is restrained, opaque, asset-free and stable for shared inst
   assert.ok(mats.some(m=>m.color.getHex()===P3_COLORS.guardian));
   resources.forEach(x=>x.dispose());
 });
+
+test('P4/A4 两套可复现真实方向光而非后处理，保留批量材质',async()=>{
+  const {p4LightVariantFromSearch}=await import('../src/render/P3Palette.ts');
+  assert.equal(p4LightVariantFromSearch('?light=soft'),'soft');
+  assert.equal(p4LightVariantFromSearch(''),'studio');
+  const scene=new THREE.Scene();
+  const studio=installP3Lighting(scene,'studio');
+  const soft=installP3Lighting(new THREE.Scene(),'soft');
+  assert.equal(studio.length,4);
+  assert.ok(studio[0].intensity<soft[0].intensity,'主方案采用暗部层次');
+  assert.ok(studio[2].intensity>soft[2].intensity,'主光受光方向更清楚');
+  assert.ok(studio.every(l=>l.intensity<2));
+});
