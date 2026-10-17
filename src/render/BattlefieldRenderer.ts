@@ -44,7 +44,7 @@ export class BattlefieldRenderer {
   })();
   /** Each distinct ship-part geometry is drawn once per kind, regardless of enemy count. */
   private readonly enemyBatches: Record<EnemyKind, Array<{
-    readonly mesh: THREE.InstancedMesh; readonly localMatrix: THREE.Matrix4
+    readonly mesh: THREE.InstancedMesh; readonly localMatrix: THREE.Matrix4; readonly name:string
   }>> = {scout:[],raider:[],guardian:[]};
   private readonly tempMatrix = new THREE.Matrix4();
   private readonly enemyPoseMatrices:Record<EnemyKind,THREE.Matrix4[]>={
@@ -53,6 +53,12 @@ export class BattlefieldRenderer {
   private readonly poseEuler=new THREE.Euler();
   private readonly poseRotation=new THREE.Matrix4();
   private readonly poseLift=new THREE.Matrix4();
+  private readonly accentScale=new THREE.Vector3(1,1,1);
+  private readonly enemyAccents:Record<EnemyKind,number[]>={scout:[],raider:[],guardian:[]};
+  private readonly enemyCueTicks=new Map<string,{attackTick?:number;damageTick?:number}>();
+  private lastWave=-1;
+  private lastFormationTurns=0;
+  private lastTurnTick=-1;
   private lastPlayerPoint: THREE.Vector3 | null = null;
   private readonly projectileMeshes = new Map<number, THREE.Mesh>();
   private readonly enemyProjectileMeshes = new Map<number, THREE.Mesh>();
@@ -158,7 +164,7 @@ export class BattlefieldRenderer {
         instances.count=0;
         instances.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
         instances.frustumCulled=false;
-        this.enemyBatches[kind].push({mesh:instances,localMatrix:part.matrix.clone()});
+        this.enemyBatches[kind].push({mesh:instances,localMatrix:part.matrix.clone(),name:part.name});
         this.layers.combat.add(instances);
       }
     }
@@ -353,8 +359,17 @@ export class BattlefieldRenderer {
   consumeEvents(events: readonly GameEvent[],state?:GameSnapshot):void {
     if(state)this.effects.consume(events,state);
     for(const event of events){
-      if(event.type==='game-reset')this.playerMotion.reset();
-      else if(event.type==='shot-fired')this.playerMotion.shot(this.reducedMotion);
+      if(event.type==='game-reset'){
+        this.playerMotion.reset();
+        this.enemyCueTicks.clear();this.lastWave=-1;this.lastTurnTick=-1;
+      }else if(event.type==='shot-fired')this.playerMotion.shot(this.reducedMotion);
+      else if(event.type==='enemy-shot-fired'){
+        const cue=this.enemyCueTicks.get(event.enemyId)??{};
+        cue.attackTick=event.tick;this.enemyCueTicks.set(event.enemyId,cue);
+      }else if(event.type==='enemy-damaged'){
+        const cue=this.enemyCueTicks.get(event.enemyId)??{};
+        cue.damageTick=event.tick;this.enemyCueTicks.set(event.enemyId,cue);
+      }
     }
   }
 
@@ -406,12 +421,24 @@ export class BattlefieldRenderer {
     const active:Record<EnemyKind,EnemyState[]>={scout:[],raider:[],guardian:[]};
     for(const enemy of state.enemies)active[enemy.type].push(enemy);
     const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if(state.currentWave!==this.lastWave||state.tick===0){
+      this.enemyCueTicks.clear();this.lastTurnTick=-1;
+      this.lastWave=state.currentWave;
+      this.lastFormationTurns=state.formationTurns;
+    }else if(state.formationTurns>this.lastFormationTurns){
+      this.lastTurnTick=state.tick;
+      this.lastFormationTurns=state.formationTurns;
+    }else if(state.formationTurns<this.lastFormationTurns){
+      this.lastFormationTurns=state.formationTurns;this.lastTurnTick=-1;
+    }
     for(const kind of ['scout','raider','guardian'] as const){
-      const enemies=active[kind],positions=this.enemyPoseMatrices[kind];
+      const enemies=active[kind],positions=this.enemyPoseMatrices[kind],accents=this.enemyAccents[kind];
       // Compose once per enemy, then multiply each actual InstancedMesh part transform.
       for(let index=0;index<enemies.length;index++){
         const enemy=enemies[index];
-        const pose=enemyVisualPose(kind,enemy.id,state.tick,state.formationDirection,state.phase,reduced);
+        const pose=enemyVisualPose(kind,enemy.id,state.tick,state.formationDirection,state.phase,
+          reduced,{turnTick:this.lastTurnTick,...this.enemyCueTicks.get(enemy.id)});
+        accents[index]=kind==='guardian'?pose.corePulse:pose.weaponPulse;
         this.poseEuler.set(pose.pitch,pose.yaw,pose.roll,'XYZ');
         this.poseRotation.makeRotationFromEuler(this.poseEuler);
         this.poseLift.makeTranslation(0,0,pose.lift);
@@ -425,6 +452,12 @@ export class BattlefieldRenderer {
         instances.count=enemies.length;
         for(let index=0;index<enemies.length;index++){
           this.tempMatrix.copy(positions[index]).multiply(part.localMatrix);
+          const isAccent=part.name==='guardian-three-dimensional-energy-lens'||
+            part.name==='raider-muzzle-emitter'||part.name==='scout-eye-inner-lens';
+          if(isAccent){
+            this.accentScale.setScalar(1+accents[index]);
+            this.tempMatrix.scale(this.accentScale);
+          }
           instances.setMatrixAt(index,this.tempMatrix);
         }
         if(enemies.length>0)instances.instanceMatrix.needsUpdate=true;
@@ -436,6 +469,11 @@ export class BattlefieldRenderer {
     this.host.dataset.enemyVisualRoll=(firstPose?.roll??0).toFixed(5);
     this.host.dataset.enemyVisualYaw=(firstPose?.yaw??0).toFixed(5);
     this.host.dataset.enemyVisualLift=(firstPose?.lift??0).toFixed(5);
+    this.host.dataset.enemyTurnCue=String(this.lastTurnTick);
+    this.host.dataset.enemyAttackCues=String([...this.enemyCueTicks.values()]
+      .filter(v=>v.attackTick!==undefined).length);
+    this.host.dataset.enemyDamageCues=String([...this.enemyCueTicks.values()]
+      .filter(v=>v.damageTick!==undefined).length);
     this.host.dataset.enemyCount = String(state.enemies.length);
     this.host.dataset.enemyHp = String(state.enemies[0]?.hp ?? '');
     this.host.dataset.enemyMaxHp = String(state.enemies[0]?.maxHp ?? '');
