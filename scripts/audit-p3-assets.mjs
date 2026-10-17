@@ -23,7 +23,8 @@ const reference=check('docs/art/reference/p3-lowpoly-q-concept.svg',bytes=>
 const geometry=[
   existsText('src/render/ShipModels.ts',['ExtrudeGeometry','SphereGeometry','q-player-pivot','guardian']),
   existsText('src/render/RingedPlanet.ts',['SphereGeometry','RingGeometry','new THREE.Mesh']),
-  existsText('src/render/AsteroidField.ts',['IcosahedronGeometry','InstancedMesh']),
+  existsText('src/render/AsteroidField.ts',['P4RockGeometry','AsteroidField']),
+  existsText('src/render/P4RockGeometry.ts',['ROCK_PROFILES','InstancedMesh','createAsteroidGeometry','vertexColors']),
   existsText('src/render/ForegroundRocks.ts',['createAsteroidGeometry','addForeground']),
   existsText('src/render/BattlefieldRenderer.ts',['InstancedMesh','renderer.render','effects.dispose()','galaxy.dispose()']),
   existsText('src/render/GalaxyBackdrop.ts',['TextureLoader','colorSpace','texture?.dispose()']),

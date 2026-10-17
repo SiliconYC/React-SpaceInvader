@@ -17,11 +17,11 @@ test('P3/C4: 四块真实低模三维边缘岩石共享 #44 生成器，全部�
   camera.lookAt(0,projection.centerY,0);
   camera.updateProjectionMatrix();
   camera.updateMatrixWorld(true);
-  assert.equal(foreground.count,4);
-  assert.equal(layers.foreground.children.length,4);
+  assert.equal(foreground.count,2);
+  assert.equal(layers.foreground.children.length,2);
   for(const item of layers.foreground.children){
     assert.ok(item instanceof THREE.Mesh);
-    assert.ok(item.geometry instanceof THREE.IcosahedronGeometry);
+    assert.ok(item.geometry instanceof THREE.BufferGeometry);
     assert.ok(item.material instanceof THREE.MeshStandardMaterial);
     assert.equal(item.material.depthTest,false);
     assert.equal(item.material.depthWrite,false);

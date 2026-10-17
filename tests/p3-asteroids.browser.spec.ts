@@ -4,8 +4,8 @@ test('P3/C3: 真实低模实例化漂移与横屏、手机遮挡/资源验收',a
   await page.goto('./');
   const stage=page.getByTestId('battlefield');
   await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
-  await expect(stage).toHaveAttribute('data-asteroid-batches','4');
-  await expect(stage).toHaveAttribute('data-asteroid-visible','12');
+  await expect(stage).toHaveAttribute('data-asteroid-batches','5');
+  await expect(stage).toHaveAttribute('data-asteroid-visible','10');
   expect(Number(await stage.getAttribute('data-draw-calls'))).toBeLessThan(64);
   await page.screenshot({path:info.outputPath('p3-c3-distant-asteroids.png'),fullPage:true});
   await page.getByRole('button',{name:'开始',exact:true}).click();

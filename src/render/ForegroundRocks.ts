@@ -11,6 +11,7 @@ interface Rock {
   readonly side: -1 | 1;
   readonly screenY: number;
   readonly phase: number;
+  readonly tint:number;
   baseX: number;
   baseY: number;
 }
@@ -25,22 +26,21 @@ export class ForegroundRocks {
   private readonly rocks: Rock[] = [];
   private readonly layers: CombatSceneLayers;
   private readonly projected = new THREE.Vector3();
-  readonly count = 4;
+  readonly count = 2;
 
   constructor(layers: CombatSceneLayers, world: Readonly<World2>) {
     this.layers = layers;
     this.world = world;
+    // Two art-directed side silhouettes, rather than four decorative clutter blocks.
     const configuration: Array<{side:-1|1; y:number; seed:number; tint:number; phase:number}> = [
-      {side:-1,y:.31,seed:79,tint:0x455b77,phase:.2},
-      {side:-1,y:.72,seed:101,tint:0x56647d,phase:2.1},
-      {side:1,y:.29,seed:131,tint:0x4e5e7b,phase:3.4},
-      {side:1,y:.70,seed:173,tint:0x495573,phase:5.7},
+      {side:-1,y:.37,seed:18,tint:0x596b87,phase:.52},
+      {side:1,y:.63,seed:24,tint:0x4b5f7b,phase:3.17},
     ];
     for (const entry of configuration) {
       const geometry = createAsteroidGeometry(entry.seed);
       geometry.computeBoundingSphere();
       const material = new THREE.MeshStandardMaterial({
-        color:entry.tint,flatShading:true,roughness:.95,metalness:.01,
+        color:entry.tint,vertexColors:true,flatShading:true,roughness:.94,metalness:.025,
         emissive:0x12182a,emissiveIntensity:.1,
       });
       const mesh = new THREE.Mesh(geometry,material);
@@ -48,7 +48,7 @@ export class ForegroundRocks {
       mesh.position.z = 3;
       const rock:Rock = {
         mesh,geometry,material,side:entry.side,screenY:entry.y,
-        phase:entry.phase,baseX:0,baseY:0,
+        phase:entry.phase,tint:entry.tint,baseX:0,baseY:0,
       };
       this.rocks.push(rock);
       // Gate clones draw material (depthTest/depthWrite off) and fails closed until refresh.
@@ -83,12 +83,12 @@ export class ForegroundRocks {
     for(const rock of this.rocks){
       // Subpixel-paced drift and true 3-axis geometry rotation, deterministic across pause.
       rock.mesh.position.set(
-        rock.baseX+Math.sin(t*.16+rock.phase)*.035,
-        rock.baseY+Math.cos(t*.11+rock.phase)*.035,3);
+        rock.baseX+Math.sin(t*(.083+.018*rock.phase)+rock.phase)*.032,
+        rock.baseY+Math.cos(t*(.097+.013*rock.phase)+rock.phase*1.3)*.028,3);
       rock.mesh.rotation.set(
-        .23+Math.sin(t*.08+rock.phase)*.12,
-        rock.phase*.19+t*.045,
-        Math.cos(t*.07+rock.phase)*.10);
+        .23+Math.sin(t*.047+rock.phase)*.09,
+        rock.phase*.19+t*(.022+.003*rock.phase),
+        Math.cos(t*.035+rock.phase)*.075);
     }
   }
 
@@ -115,7 +115,7 @@ export class ForegroundRocks {
     const color=new THREE.Color(tint);
     for(const rock of this.rocks){
       const mat=rock.mesh.material as THREE.MeshStandardMaterial;
-      mat.color.multiply(color);
+      mat.color.setHex(rock.tint).multiply(color);
     }
   }
   get visibleCount():number {return this.layers.visibleForegroundCount;}
