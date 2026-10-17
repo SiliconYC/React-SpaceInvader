@@ -40,12 +40,11 @@ test('P4/C1: 五个飞行阶段源于实际 XY 变化，且动画与绝对墙上
   assert.ok(launch.roll<0&&m.thrust>.3);
   m.update(10.4,2,'running',100000);
   assert.equal(m.stage,'cruise');
-  m.update(10.4,3,'running',100001);
-  assert.equal(m.stage,'brake');
-  const afterBrake=m.thrust;
-  m.update(10.2,4,'running',-10000);
+  m.update(10.2,3,'running',100001);
   assert.equal(m.stage,'reverse');
-  assert.ok(afterBrake>=.3);
+  m.update(10.2,4,'running',-10000);
+  assert.equal(m.stage,'brake');
+  assert.ok(m.thrust>=.3);
   const n=new PlayerShipMotion();
   n.update(10,0,'running',1);
   n.update(10.2,1,'running',999999);
