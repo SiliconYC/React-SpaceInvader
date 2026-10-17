@@ -56,7 +56,7 @@ export class CameraDirector {
     }
     if(!this.cue)return REST;
     if(this.lastFrame!==null){
-      this.elapsed+=clamp(now-this.lastFrame,0,100);
+      this.elapsed+=Math.max(0,now-this.lastFrame);
     }
     this.lastFrame=now;
     const duration=DURATIONS[this.cue];
