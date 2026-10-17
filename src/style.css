@@ -386,3 +386,122 @@ h1 { margin: 0; font-size: clamp(18px, 2vw, 24px); line-height: 1.2; font-weight
 @media(prefers-reduced-motion:reduce) {
   .play-actions button,.debug-toggle {transition:none}
 }
+
+
+/* P4/D1 — cockpit-light, not a dashboard. Full viewport stays inside the WebGL canvas. */
+:root { --ui-text:#f3faff; --ui-subtle:#c0d2dd; --ui-glass:rgba(6,20,36,.83); }
+.game-shell { isolation:isolate; }
+.game-header { top:max(20px, env(safe-area-inset-top)); z-index:5; }
+.brand h1 { font-size:clamp(20px,1.7vw,26px);font-weight:760;letter-spacing:.055em;
+  text-shadow:0 2px 12px rgba(0,8,21,.8); }
+.level-select { min-height:38px; border:1px solid rgba(190,218,232,.32);
+  background:rgba(7,20,36,.70); color:var(--ui-text); border-radius:10px; font-weight:550;
+  box-shadow:0 3px 12px rgba(0,6,18,.2); }
+.level-select:hover:not(:disabled){border-color:rgba(207,243,255,.7)}
+.level-select:focus-visible,.debug-toggle:focus-visible,
+.touch-key:focus-visible,.play-actions button:focus-visible,.clear-scores:focus-visible,
+.audio-settings input:focus-visible { outline:2px solid #e3fbff;outline-offset:3px; }
+.header-tools { gap:clamp(8px,1.3vw,15px); }
+.debug-toggle {min-height:40px;min-width:38px;padding:7px 5px;color:#d1e1ec;
+  text-shadow:0 1px 8px rgba(0,7,17,.88);font-weight:600; }
+.debug-toggle[aria-expanded="true"] {color:#fff}
+.debug-toggle:disabled {opacity:.48}
+.score-hud {top:max(25px,env(safe-area-inset-top));gap:clamp(17px,2.2vw,35px);
+  color:var(--ui-subtle);font-size:11px;font-weight:650;letter-spacing:.07em;
+  text-shadow:0 2px 9px rgba(0,7,18,.95); }
+.score-hud strong {font-size:clamp(19px,1.65vw,24px);font-weight:780;color:#fff;
+  margin-left:8px;font-variant-numeric:tabular-nums;letter-spacing:0; }
+.score-hud .wave-hud {font-size:12px;font-weight:650;color:#e6f0f7;letter-spacing:.04em}
+.life-ship {width:22px;height:20px;filter:drop-shadow(0 1px 5px rgba(30,119,166,.33))}
+.play-actions {z-index:5;gap:12px;bottom:max(24px,calc(env(safe-area-inset-bottom) + 16px)); }
+.play-actions button {min-height:46px;min-width:100px;padding:10px 22px;border-radius:14px;
+  background:#edf9fa;color:#0b2b3d;border:1px solid rgba(255,255,255,.85);
+  font-size:14px;font-weight:760;letter-spacing:.025em;
+  box-shadow:0 7px 21px rgba(2,8,20,.35); }
+.play-actions button:hover{background:#fff;transform:translateY(-1px)}
+.play-actions button:active {transform:translateY(1px)}
+.play-actions .secondary {background:rgba(7,23,40,.67);border-color:rgba(172,204,223,.45);
+  color:#e8f4f8;box-shadow:none}
+.play-actions .secondary:hover {background:rgba(35,66,91,.9)}
+.control-hint {color:#d2e2ed;bottom:clamp(91px,12vh,112px);
+  font-size:12px;font-weight:500;letter-spacing:.015em;
+  text-shadow:0 2px 8px rgba(0,0,0,.92)}
+.control-hint span {color:#b8cddd}
+.level-description {top:clamp(68px,6vw,83px);font-size:12px;
+  color:#c4d6e4;text-shadow:0 2px 9px rgba(0,3,14,.9);max-width:360px}
+.wave-wait {top:42%;font-size:clamp(17px,2vw,26px);
+  font-weight:690;letter-spacing:.11em;color:#f1faff;
+  text-shadow:0 3px 16px rgba(0,8,23,.88)}
+.pause-overlay {top:43%;font-size:clamp(25px,3.6vw,42px);font-weight:740;
+  letter-spacing:.14em;color:#fff;text-shadow:0 3px 20px rgba(0,6,20,.95)}
+.result-overlay {top:43%;gap:10px;text-shadow:0 3px 22px rgba(0,5,18,.98)}
+.result-overlay strong {font-size:clamp(42px,6vw,78px);font-weight:820;letter-spacing:.075em;color:#f6fcff}
+.result-overlay span {font-size:clamp(12px,1.1vw,15px);letter-spacing:.04em;
+  color:#e2eff6;font-weight:580}
+.game-shell[data-ui-phase="lost"] .result-overlay strong {color:#ffc1bf}
+.score-board,.audio-settings{top:max(77px,calc(env(safe-area-inset-top) + 56px));
+  z-index:7;border:1px solid rgba(182,213,231,.28);background:var(--ui-glass);
+  border-radius:16px;box-shadow:0 14px 46px rgba(0,5,16,.4);
+  backdrop-filter:blur(12px)}
+.score-board h2 {font-size:14px;font-weight:760;line-height:1.5}
+.score-board li {padding:10px 0;border-color:rgba(195,225,236,.14)}
+.score-board li strong {font-size:15px;font-variant-numeric:tabular-nums}
+.score-board li span {color:#c5d7e4;line-height:1.5}
+.clear-scores {min-height:42px;color:#d0e1ea;text-decoration:underline;text-underline-offset:3px}
+.audio-settings {gap:16px;font-weight:580;min-width:210px}
+.audio-settings label {min-height:28px}
+.audio-settings input[type="checkbox"] {width:18px;height:18px}
+.audio-settings input[type="range"] {width:115px}
+.touch-controls {z-index:6;bottom:max(14px,env(safe-area-inset-bottom));}
+.touch-movement {gap:12px}
+.touch-key {width:70px;height:70px;min-width:70px;min-height:70px;
+  display:flex;justify-content:center;align-items:center;
+  border-radius:21px;border:1px solid rgba(198,230,241,.48);
+  background:rgba(7,27,46,.52);color:#f1fbff;
+  box-shadow:0 4px 15px rgba(0,5,14,.23), inset 0 1px 0 rgba(255,255,255,.12);
+  transition:background .12s ease, transform .12s ease, border-color .12s ease }
+.touch-key svg {width:30px;height:30px;flex:none}
+.touch-key[data-pressed="true"],.touch-key:active {
+  background:rgba(47,137,173,.8);border-color:#d4fbff;
+  transform:scale(.94);box-shadow:inset 0 2px 9px rgba(0,9,22,.25)}
+.touch-key:disabled {opacity:.3;transform:none}
+.touch-fire {width:88px;min-width:88px;gap:2px;flex-direction:column;border-radius:25px}
+.touch-fire svg {width:29px;height:29px}
+.touch-fire span {font-size:11px;font-weight:720;letter-spacing:.08em}
+@media(max-width:850px) {
+  .game-header {left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right));
+    top:max(11px,env(safe-area-inset-top));gap:6px}
+  .brand {gap:8px}
+  .brand h1 {font-size:19px;letter-spacing:.03em}
+  .level-select {font-size:11px;min-height:33px;max-width:128px;padding:5px 7px}
+  .header-tools {gap:6px}
+  .debug-toggle {font-size:11px;min-height:33px;min-width:32px;padding:5px 2px}
+  .score-hud {top:max(59px,calc(env(safe-area-inset-top) + 47px));
+    gap:clamp(10px,3vw,24px);font-size:11px}
+  .score-hud strong {font-size:18px}
+  .score-hud .wave-hud {font-size:11px}
+  .level-description {top:104px;left:16px;right:16px;font-size:11px;max-width:none}
+  .score-board,.audio-settings{top:max(101px,calc(env(safe-area-inset-top) + 85px))}
+}
+@media(pointer:coarse) {
+  .game-header {top:max(12px,env(safe-area-inset-top))}
+  .play-actions {bottom:max(102px,calc(env(safe-area-inset-bottom) + 88px))}
+  .control-hint {display:none}
+}
+@media(pointer:coarse) and (max-height:520px) {
+  .touch-key{height:62px;min-height:62px;width:62px;min-width:62px;border-radius:19px}
+  .touch-fire{width:78px;min-width:78px;border-radius:23px}
+  .touch-controls{bottom:max(7px,env(safe-area-inset-bottom))}
+  .play-actions {bottom:max(75px,calc(env(safe-area-inset-bottom) + 69px))}
+  .score-hud{top:max(51px,calc(env(safe-area-inset-top) + 40px))}
+  .level-description {display:none}
+  .result-overlay{top:43%}
+}
+@media(max-width:380px){
+  .brand h1{font-size:17px}
+  .level-select{max-width:105px}
+  .score-hud{gap:9px}
+}
+@media(prefers-reduced-motion:reduce){
+  .touch-key,.play-actions button{transition:none}
+}

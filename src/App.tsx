@@ -184,15 +184,19 @@ export default function App() {
 
   const touchDown=(action:TouchAction,event:ReactPointerEvent<HTMLButtonElement>)=>{
     event.preventDefault();
+    event.currentTarget.dataset.pressed = 'true';
+    event.currentTarget.setAttribute('aria-pressed','true');
     try {event.currentTarget.setPointerCapture(event.pointerId);} catch {/* unsupported */}
     touchRef.current?.down(action,event.pointerId);
   };
   const touchUp=(event:ReactPointerEvent<HTMLButtonElement>)=>{
+    delete event.currentTarget.dataset.pressed;
+    event.currentTarget.setAttribute('aria-pressed','false');
     touchRef.current?.up(event.pointerId);
   };
 
   return (
-    <main className="game-shell">
+    <main className="game-shell" data-ui-phase={state.phase}>
       <div ref={viewportRef} className="viewport" data-testid="battlefield"
         data-phase={state.phase} aria-label="二维规则战场，Three.js 三维渲染" role="img" />
 
@@ -211,9 +215,9 @@ export default function App() {
         <div className="header-tools">
           <button type="button" className="debug-toggle" aria-expanded={scoresOpen}
             disabled={state.phase==='running'||state.phase==='paused'} aria-controls="score-board"
-            onClick={() => setScoresOpen(v=>!v)}>成绩</button>
+            onClick={() => {setAudioOpen(false);setScoresOpen(v=>!v);}}>成绩</button>
           <button type="button" className="debug-toggle" aria-expanded={audioOpen}
-            aria-controls="audio-settings" onClick={() => setAudioOpen(v => !v)}>音频</button>
+            aria-controls="audio-settings" onClick={() => {setScoresOpen(false);setAudioOpen(v => !v);}}>音频</button>
           <button className="debug-toggle" type="button" aria-pressed={debug}
           onClick={() => setDebug(value => !value)}>{debug ? '关闭调试' : '调试'}</button>
         </div>
@@ -270,17 +274,17 @@ export default function App() {
         <div className="touch-movement">
           {(['left','right'] as const).map(action=>
             <button key={action} type="button" disabled={state.phase!=='running'}
-              className="touch-key" data-testid={'touch-'+action}
+              className="touch-key" data-testid={'touch-'+action} aria-pressed="false"
               aria-label={action==='left'?'向左移动':'向右移动'}
               onPointerDown={e=>touchDown(action,e)} onPointerUp={touchUp}
               onPointerCancel={touchUp} onLostPointerCapture={touchUp}>
-              {action==='left'?'◀':'▶'}
+              <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d={action==='left'?'M20 7 11 16l9 9':'m12 7 9 9-9 9'} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>)}
         </div>
-        <button type="button" className="touch-key touch-fire" data-testid="touch-fire"
+        <button type="button" className="touch-key touch-fire" data-testid="touch-fire" aria-pressed="false"
           disabled={state.phase!=='running'} aria-label="持续射击"
           onPointerDown={e=>touchDown('fire',e)} onPointerUp={touchUp}
-          onPointerCancel={touchUp} onLostPointerCapture={touchUp}>射击</button>
+          onPointerCancel={touchUp} onLostPointerCapture={touchUp}><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" strokeWidth="2.5"/><circle cx="16" cy="16" r="3" fill="currentColor"/></svg><span>射击</span></button>
       </nav>
       <div className="play-actions" aria-label="引擎操作">
         {!loadError && webgl === 'ready' && state.phase === 'ready' &&
