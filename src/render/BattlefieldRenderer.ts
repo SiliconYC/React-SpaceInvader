@@ -8,6 +8,7 @@ import { PlayerShipMotion } from './PlayerShipMotion.ts';
 import { CombatFX } from './CombatFX.ts';
 import { combatProjection } from './CombatProjection.ts';
 import { CombatSceneLayers, SCENE_LAYER_ORDER } from './CombatSceneLayers.ts';
+import { GalaxyBackdrop } from './GalaxyBackdrop.ts';
 
 /** 世界坐标在二维，z 仅为渲染层深度，不参与任何游戏规则。 */
 export function toDisplayXY(point: Point2, world: World2): THREE.Vector3 {
@@ -18,6 +19,7 @@ export class BattlefieldRenderer {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
   private readonly layers = new CombatSceneLayers(this.scene);
+  private readonly galaxy: GalaxyBackdrop;
   private readonly camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
   private readonly world: Readonly<World2>;
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
@@ -90,6 +92,7 @@ export class BattlefieldRenderer {
 
     // Full-viewport sky, no box backboard, marker corners or engineering frame.
     this.scene.background = new THREE.Color(0x07152b);
+    this.galaxy = new GalaxyBackdrop(this.layers.starfield, this.host);
     const halfW = this.world.width / 2;
     const halfH = this.world.height / 2;
 
@@ -206,6 +209,7 @@ export class BattlefieldRenderer {
     this.camera.far = Math.max(distance + 150, 200);
     this.camera.updateProjectionMatrix();
     this.camera.updateMatrixWorld(true);
+    this.galaxy.resize(layout,this.camera,width,height);
     if (!this.contextLost) this.renderer.setSize(width, height, false);
     this.host.dataset.cameraProjection = isPerspective ? 'perspective' : 'orthographic';
     this.host.dataset.cameraFov = isPerspective ? String(layout.fovDegrees) : '0';
@@ -414,6 +418,7 @@ export class BattlefieldRenderer {
     this.projectileMeshes.clear();
     this.enemyProjectileMeshes.clear();
     this.effects.dispose();
+    this.galaxy.dispose();
     this.layers.dispose();
     for (const resource of this.resources) resource.dispose();
     this.renderer.dispose();
