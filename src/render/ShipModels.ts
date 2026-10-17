@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { EnemyKind } from '../core/level.ts';
+import { P3_COLORS, P3_LIGHTING } from './P3Palette.ts';
 
 /** 造型素材均为原创参数化网格，单位皆位于 XY 逻辑平面，厚度只占显示用 z。 */
 export type GpuResource = THREE.BufferGeometry | THREE.Material;
@@ -11,18 +12,18 @@ export interface ShipTemplates {
 export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   const track = <T extends GpuResource>(resource: T): T => { resources.push(resource); return resource; };
   const armor = (color: number, luminous = 0.08) => track(new THREE.MeshStandardMaterial({
-    color, emissive: color, emissiveIntensity: luminous, metalness: .16, roughness: .61,
+    color, emissive: color, emissiveIntensity: luminous, metalness: P3_LIGHTING.armorMetalness, roughness: P3_LIGHTING.armorRoughness,
     flatShading: true,
   }));
   const gleam = (color: number) => track(new THREE.MeshStandardMaterial({
-    color, emissive: color, emissiveIntensity: .95, roughness: .2, metalness: .18,
+    color, emissive: color, emissiveIntensity: P3_LIGHTING.emissiveAccent, roughness: .35, metalness: .06,
   }));
   const dark = armor(0x243c56, 0.02);
-  const scoutMetal = armor(0xffb86b, .08);
+  const scoutMetal = armor(P3_COLORS.scout, .08);
   const scoutGlow = gleam(0xffce92);
-  const raiderMetal = armor(0xe67a7d, .08);
+  const raiderMetal = armor(P3_COLORS.raider, .08);
   const raiderGlow = gleam(0xffb7a7);
-  const guardianMetal = armor(0xa99adf, .08);
+  const guardianMetal = armor(P3_COLORS.guardian, .08);
   const guardianGlow = gleam(0xaa9aff);
 
   function hull(group: THREE.Group, points: number[], depth: number, material: THREE.Material, z = 0): void {
@@ -59,19 +60,19 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   const player = new THREE.Group();
   player.name='q-player-pivot';
   const ceramic = track(new THREE.MeshStandardMaterial({
-    color:0xe9f5fc,metalness:.12,roughness:.62,flatShading:true,
+    color:P3_COLORS.ceramic,metalness:.12,roughness:.62,flatShading:true,
   }));
   const blue = track(new THREE.MeshStandardMaterial({
-    color:0x62c5e4,metalness:.14,roughness:.58,flatShading:true,
+    color:P3_COLORS.playerBlue,metalness:.14,roughness:.58,flatShading:true,
   }));
   const deepBlue = track(new THREE.MeshStandardMaterial({
-    color:0x287ca6,metalness:.2,roughness:.53,flatShading:true,
+    color:P3_COLORS.playerDeep,metalness:.2,roughness:.53,flatShading:true,
   }));
   const glass = track(new THREE.MeshStandardMaterial({
-    color:0x143959,metalness:.18,roughness:.28,flatShading:true,
+    color:P3_COLORS.canopy,metalness:.18,roughness:.28,flatShading:true,
   }));
   const thruster = track(new THREE.MeshStandardMaterial({
-    color:0x80edfb,emissive:0x37c6ef,emissiveIntensity:1.2,metalness:0,roughness:.4,
+    color:P3_COLORS.thrust,emissive:P3_COLORS.thrust,emissiveIntensity:.92,metalness:0,roughness:.42,
   }));
   // 实体宽翼：双侧以不同受光面构成厚度，翼尖圆角靠离散倒角而非复杂贴图。
   hull(player,[
@@ -104,7 +105,7 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   // P3/B2: 三种原创 Q 版敌机均为可编辑真 3D Mesh，实例化仍按部件而非敌机分配。
   // 侦察机：纤长三叉/燕翼，单中央凸眼和高背甲壳。宽约 1.72 单位。
   const scout = new THREE.Group();
-  const scoutPale=armor(0xffd49b,.04);
+  const scoutPale=armor(P3_COLORS.scoutTrim,.04);
   hull(scout,[0,-.54,-.24,-.27,-.83,-.38,-.68,.06,-.32,.37,
     0,.28,.32,.37,.68,.06,.83,-.38,.24,-.27],.29,scoutMetal,-.07);
   for(const side of [-1,1]){
@@ -119,7 +120,7 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
 
   // 袭击机：更宽的双钳翼、相互分离的炮舱和下压机鼻，明显不是 Scout 换色。
   const raider = new THREE.Group();
-  const raiderPale=armor(0xffc7af,.04);
+  const raiderPale=armor(P3_COLORS.raiderTrim,.04);
   hull(raider,[-.91,.36,-.48,.30,-.31,-.33,0,-.57,.31,-.33,
     .48,.30,.91,.36,1.05,-.23,.75,-.43,.35,-.41,0,-.58,
     -.35,-.41,-.75,-.43,-1.05,-.23],.34,raiderMetal,-.08);
@@ -136,7 +137,7 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
 
   // 守卫机：宽重盾形装甲、双侧厚护肩和高起的发光能量核心。
   const guardian = new THREE.Group();
-  const guardianPale=armor(0xd5c5ff,.04);
+  const guardianPale=armor(P3_COLORS.guardianTrim,.04);
   const guardianShadow=armor(0x655a9c,.02);
   const core = gleam(0x79e4ef);
   hull(guardian,[-1.07,.43,-1.17,-.12,-1.03,-.44,-.55,-.59,
