@@ -93,6 +93,8 @@ export class BattlefieldRenderer {
     this.camera.position.set(0, 0, 50);
     this.camera.lookAt(0, 0, 0);
     installP3Lighting(this.scene);
+    this.host.dataset.p3LightRig='4';
+    this.host.dataset.p3ToneExposure=String(P3_LIGHTING.toneMappingExposure);
 
     // Full-viewport sky, no box backboard, marker corners or engineering frame.
     this.scene.background = new THREE.Color(P3_COLORS.space);
