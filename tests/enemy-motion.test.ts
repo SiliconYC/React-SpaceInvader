@@ -30,3 +30,37 @@ test('暂停不继续更新、重置与减少动态效果统一归零',()=>{
   assert.deepEqual(enemyVisualPose('raider','id',180,1,'running',true),ZERO_ENEMY_POSE);
   assert.deepEqual(enemyVisualPose('raider','id',180,1,'lost'),ZERO_ENEMY_POSE);
 });
+
+test('P4/C2: 事件驱动姿态与核心脉冲仅依赖既有逻辑帧和事件',()=>{
+  const cues={turnTick:120,attackTick:119,damageTick:118};
+  const kinds=['scout','raider','guardian'] as const;
+  for(const kind of kinds){
+    const a=enemyVisualPose(kind,'squad-2-7',120,1,'running',false,cues);
+    assert.deepEqual(a,enemyVisualPose(kind,'squad-2-7',120,1,'paused',false,cues));
+    assert.ok(a.weaponPulse>0);
+    const recovered=enemyVisualPose(kind,'squad-2-7',260,1,'running',false,cues);
+    assert.ok(recovered.weaponPulse<a.weaponPulse);
+    assert.deepEqual(enemyVisualPose(kind,'squad-2-7',120,1,'running',true,cues),
+      ZERO_ENEMY_POSE);
+  }
+  const guard=enemyVisualPose('guardian','tank',120,1,'running',false,cues);
+  assert.ok(guard.corePulse>.3);
+  assert.ok(Math.abs(guard.roll)<.04);
+  const raider=enemyVisualPose('raider','tank',120,1,'running',false,cues);
+  assert.ok(Math.abs(raider.roll)>Math.abs(guard.roll));
+  assert.ok(raider.weaponPulse>guard.weaponPulse);
+});
+test('P4/C2: 编队的 XY 完全外置，25 机相位稳定，方向折返且不抽取随机数',()=>{
+  const original=Math.random;
+  Math.random=()=>{throw new Error('视觉系统不得消费随机数');};
+  try{
+    for(const kind of ['scout','raider','guardian'] as const){
+      const squad=Array.from({length:25},(_,i)=>
+        enemyVisualPose(kind,'wave-1-'+i,240,1,'running',false,{turnTick:238}));
+      assert.ok(new Set(squad.map(v=>v.roll.toFixed(5))).size>12);
+      assert.ok(squad.every(p=>Math.abs(p.lift)<.05&&Math.abs(p.yaw)<.2));
+      assert.ok(squad.every(p=>Object.keys(p).every(key=>
+        Number.isFinite(p[key as keyof typeof p]))));
+    }
+  }finally{Math.random=original;}
+});
