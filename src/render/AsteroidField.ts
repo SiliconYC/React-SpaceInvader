@@ -86,6 +86,13 @@ export class AsteroidField{
       item.instance.instanceMatrix.needsUpdate=true;
     }
   }
+  setTint(tint:number):void{
+    for(const rock of this.rocks){
+      (rock.instance.material as THREE.MeshStandardMaterial).color
+        .setHex([0x3d4c6a,0x46516f,0x545875,0x354862][rock.kind])
+        .multiply(new THREE.Color(tint));
+    }
+  }
   get batches():number{return this.rocks.length;}
   get visibleCount():number{return this.isPortrait?0:this.totalCount;}
   dispose():void{
