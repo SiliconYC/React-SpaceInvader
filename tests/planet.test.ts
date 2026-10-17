@@ -6,7 +6,9 @@ import {combatProjection} from '../src/render/CombatProjection.ts';
 
 test('真低模球体 + 倾斜 RingGeometry 且正反面由深度测试遮挡',()=>{
   const g=new THREE.Group(),p=new RingedPlanet(g);
-  assert.equal(p.meshes,2);
+  assert.equal(p.meshes,3);
+  assert.ok(p.outerRing.geometry instanceof THREE.RingGeometry);
+  assert.equal(p.outerRing.material.depthWrite,false);
   assert.ok(p.sphere.geometry instanceof THREE.BufferGeometry);
   assert.ok(p.sphere.geometry.getAttribute('position').count>500);
   assert.ok(p.sphere.geometry.getAttribute('color').count>500);
