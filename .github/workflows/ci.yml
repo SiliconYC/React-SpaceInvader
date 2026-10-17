@@ -28,6 +28,7 @@ jobs:
           name: p2-baseline-${{ github.sha }}
           path: |
             test-results/**/p3-*.png
+            test-results/**/p4-*.png
             test-results/**/desktop-baseline.png
             test-results/**/narrow-baseline.png
             test-results/**/fx-*.png
@@ -38,6 +39,7 @@ jobs:
             test-results/**/touch-*.png
             test-results/**/mobile-gpu-performance.json
             test-results/**/p3-*.json
+            test-results/**/p4-*.json
             artifacts/p3-asset-audit.json
           retention-days: 7
           if-no-files-found: ignore

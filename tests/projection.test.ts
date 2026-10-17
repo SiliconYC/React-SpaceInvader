@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { combatProjection, projectBattlePoint } from '../src/render/CombatProjection.ts';
+import { combatProjection, projectBattlePoint, compositionFromSearch } from '../src/render/CombatProjection.ts';
 
 const world = { width: 36, height: 24 };
 const close = (actual: number, expected: number) =>
@@ -32,4 +32,20 @@ test('中心视轴始终垂直 XY，透视与正交共用零视差坐标公式',
 test('非法尺寸必须拒绝，不能传播 NaN 到摄影机', () => {
   assert.throws(()=>combatProjection(world,0,200,false),RangeError);
   assert.throws(()=>combatProjection(world,200,0,false),RangeError);
+});
+
+test('P4/A1 两种构图严格保持 XY 等比例和安全边界',()=>{
+  assert.equal(compositionFromSearch('?composition=breathing'),'breathing');
+  assert.equal(compositionFromSearch(''),'stage');
+  for(const [width,height,coarse] of [[1920,1080,false],[390,844,true],[844,390,true]] as const){
+    const stage=combatProjection(world,width,height,coarse,'stage');
+    const airy=combatProjection(world,width,height,coarse,'breathing');
+    assert.ok(airy.spanY>stage.spanY);
+    for(const layout of [stage,airy]){
+      const left=projectBattlePoint({x:0,y:2},world,layout,width,height);
+      const right=projectBattlePoint({x:36,y:2},world,layout,width,height);
+      assert.ok(left.x>0&&right.x<width);
+      close(right.x-left.x,world.width*height/layout.spanY);
+    }
+  }
 });
