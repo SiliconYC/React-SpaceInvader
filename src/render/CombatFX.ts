@@ -75,7 +75,8 @@ export class CombatFX {
 
   /** A bounded visual burst keyed by authoritative event, not independent gameplay. */
   private emit(kind:Kind,position:Point2,count:number,tick:number,seed:number):void{
-    const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false;
+    const reduced=typeof window!=='undefined' &&
+      (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false);
     const time=performance.now();
     const life=reduced?110:kind==='finish'||kind==='defeat'?650:
       kind==='wave'?390:kind==='burst'?340:kind==='damage'?300:
