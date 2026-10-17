@@ -12,7 +12,7 @@ import { GalaxyBackdrop } from './GalaxyBackdrop.ts';
 import { RingedPlanet } from './RingedPlanet.ts';
 import { AsteroidField } from './AsteroidField.ts';
 import { ForegroundRocks } from './ForegroundRocks.ts';
-import { P3_LIGHTING, installP3Lighting } from './P3Palette.ts';
+import { P3_COLORS, P3_LIGHTING, installP3Lighting } from './P3Palette.ts';
 import { VISUAL_THEMES, type VisualThemeId } from '../levels/visualThemes.ts';
 
 /** 世界坐标在二维，z 仅为渲染层深度，不参与任何游戏规则。 */
