@@ -106,7 +106,7 @@ export class BattlefieldRenderer {
 
     // Full-viewport sky, no box backboard, marker corners or engineering frame.
     this.scene.background = new THREE.Color(theme.sky);
-    this.galaxy = new GalaxyBackdrop(this.layers.starfield, this.host, theme.galaxyTint);
+    this.galaxy = new GalaxyBackdrop(this.layers.starfield, this.host, theme.galaxyTint, theme.background);
     this.asteroids = new AsteroidField(this.layers.environment);
     this.asteroids.setTint(theme.asteroidTint);
     this.foregroundRocks = new ForegroundRocks(this.layers,this.world);
