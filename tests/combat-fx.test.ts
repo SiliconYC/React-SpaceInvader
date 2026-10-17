@@ -47,11 +47,13 @@ test('P4/C3：开火、装甲、玩家受伤、敌弹与终局各有事件响应
   fx.consume(events,state);
   assert.equal(fx.events,5);
   assert.equal(fx.armorEvents,1);
+  assert.equal(fx.damageEvents,1);
   assert.equal(fx.kind,'finish');
   fx.consume([{type:'game-reset',tick:0}],state);
   assert.equal(fx.active,0);
   assert.equal(fx.events,0);
   assert.equal(fx.armorEvents,0);
+  assert.equal(fx.damageEvents,0);
   fx.consume([{type:'game-finished',tick:20,phase:'lost',outcome:'lives-exhausted'}],state);
   assert.equal(fx.kind,'defeat');
   fx.dispose();
