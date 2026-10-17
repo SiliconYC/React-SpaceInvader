@@ -15,6 +15,7 @@ export class PlayerShipMotion {
   private lastX:number|null=null;
   private lastTick=-1;
   private velocity=0;
+  private commandSpeed=0;
   private kick=0;
   private braking=0;
   private counterbank=0;
@@ -24,7 +25,7 @@ export class PlayerShipMotion {
 
   reset():PlayerPose {
     this.pose=REST;
-    this.lastX=null;this.lastTick=-1;this.velocity=0;
+    this.lastX=null;this.lastTick=-1;this.velocity=0;this.commandSpeed=0;
     this.kick=0;this.braking=0;this.counterbank=0;this.elapsed=0;
     this.state='hover';this.power=.3;
     return this.pose;
@@ -45,11 +46,13 @@ export class PlayerShipMotion {
     const dt=frames/60;
     const speed=clamp((x-this.lastX)/dt/12,-1,1);
     const oldVelocity=this.velocity;
+    const previousCommand=this.commandSpeed;
+    this.commandSpeed=speed;
     this.lastX=x;this.lastTick=tick;this.elapsed+=dt;
-    const reversing=Math.sign(speed)!==Math.sign(oldVelocity)&&
-      Math.abs(speed)>.08&&Math.abs(oldVelocity)>.08;
-    const slowing=Math.abs(speed)<Math.abs(oldVelocity)-.18;
-    const starting=Math.abs(speed)>Math.abs(oldVelocity)+.18;
+    const reversing=Math.sign(speed)!==Math.sign(previousCommand)&&
+      Math.abs(speed)>.08&&Math.abs(previousCommand)>.08;
+    const slowing=Math.abs(speed)<Math.abs(previousCommand)-.18;
+    const starting=Math.abs(speed)>Math.abs(previousCommand)+.18;
     this.state=reversing?'reverse':slowing?'brake':starting?'launch':
       Math.abs(speed)>.08?'cruise':'hover';
     // The thrust response never delays movement. It only affects rendering.
