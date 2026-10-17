@@ -10,7 +10,9 @@ export class GalaxyBackdrop {
   private height = 1;
   private readonly sourceAspect = 1600 / 900;
   private state: 'loading'|'loaded'|'fallback' = 'loading';
-  static readonly path = 'art/backgrounds/galaxy-v2.webp';
+  static readonly path = 'art/backgrounds/galaxy-p4-veil.webp';
+  static readonly alternatePath = 'art/backgrounds/galaxy-p4-arc.webp';
+  static readonly legacyPath = 'art/backgrounds/galaxy-v2.webp';
   constructor(private readonly parent: THREE.Group, private readonly host: HTMLDivElement,
     private readonly tint:number=0xffffff) {
     const geometry = new THREE.PlaneGeometry(1, 1);
@@ -25,7 +27,12 @@ export class GalaxyBackdrop {
     this.mesh.frustumCulled = false;
     parent.add(this.mesh);
     host.dataset.galaxy = 'loading';
-    host.dataset.galaxyUrl = import.meta.env.BASE_URL + GalaxyBackdrop.path;
+    // Reproducible real-game comparison: ?galaxy=veil|arc|legacy; no external runtime requests.
+    const choice=new URLSearchParams(window.location.search).get('galaxy');
+    const selected=choice==='arc' ? GalaxyBackdrop.alternatePath :
+      choice==='legacy' ? GalaxyBackdrop.legacyPath : GalaxyBackdrop.path;
+    host.dataset.galaxyVariant=choice==='arc'?'arc':choice==='legacy'?'legacy':'veil';
+    host.dataset.galaxyUrl = import.meta.env.BASE_URL + selected;
     new THREE.TextureLoader().load(
       host.dataset.galaxyUrl,
       texture => {
