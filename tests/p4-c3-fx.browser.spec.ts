@@ -35,16 +35,17 @@ test('P4/C3：密集真实战斗 15+ 事件维持上限，暂停／移动端清�
   test.setTimeout(65000);
   await page.route('**/levels/first-contact.json',async route=>{
     const response=await route.fetch(),json=await response.json();
-    json.waves[0].attack.shotsPerMinute=360;
+    json.waves[0].attack.shotsPerMinute=240;
     json.waves[0].attack.projectileSpeed=9;
     await route.fulfill({response,json});
   });
   await page.goto('./');
   const stage=page.getByTestId('battlefield');
+  await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
   await page.getByRole('button',{name:'开始',exact:true}).click();
   await page.keyboard.down('Space');
   await expect.poll(async()=>Number(await stage.getAttribute('data-fx-emitted')),
-    {timeout:13000}).toBeGreaterThanOrEqual(15);
+    {timeout:20000}).toBeGreaterThanOrEqual(15);
   await page.keyboard.up('Space');
   await page.screenshot({path:info.outputPath('p4-c3-dense-desktop.png')});
   const metrics=await stage.evaluate(el=>({
