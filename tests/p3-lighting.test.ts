@@ -16,7 +16,7 @@ test('P3/D1 palette is restrained, opaque, asset-free and stable for shared inst
   const mats=[...new Set(meshes.map(x=>x.material as THREE.MeshStandardMaterial))];
   assert.ok(mats.length<25);
   assert.ok(mats.every(m=>m instanceof THREE.MeshStandardMaterial && m.map===null && m.roughness>=.28));
-  assert.ok(mats.filter(m=>m.emissiveIntensity>=.6).length<8,'glow only for small accents');
+  assert.ok(mats.filter(m=>m.emissive.getHex()!==0 && m.emissiveIntensity>=.6).length<8,'glow only for small accents');
   assert.ok(mats.some(m=>m.color.getHex()===P3_COLORS.ceramic));
   assert.ok(mats.some(m=>m.color.getHex()===P3_COLORS.scout));
   assert.ok(mats.some(m=>m.color.getHex()===P3_COLORS.raider));
