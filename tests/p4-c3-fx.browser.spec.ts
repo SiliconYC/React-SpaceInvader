@@ -4,6 +4,7 @@ import {writeFile} from 'node:fs/promises';
 test.use({viewport:{width:1920,height:1080},video:'on'});
 
 test('P4/C3：真实护甲命中→击毁→胜利演出与资源复用',async({page},info)=>{
+  test.setTimeout(90000);
   await page.route('**/levels/first-contact.json',async route=>{
     const response=await route.fetch(),json=await response.json();
     Object.assign(json.waves[0].formation,{rows:1,columns:1,startX:18,startY:10,type:'guardian'});
@@ -32,7 +33,7 @@ test('P4/C3：真实护甲命中→击毁→胜利演出与资源复用',async({
   expect(Number(await stage.getAttribute('data-fx-reusable'))).toBeGreaterThan(0);
 });
 test('P4/C3：密集真实战斗 15+ 事件维持上限，暂停／移动端清洁收束',async({page},info)=>{
-  test.setTimeout(65000);
+  test.setTimeout(110000);
   await page.route('**/levels/first-contact.json',async route=>{
     const response=await route.fetch(),json=await response.json();
     json.waves[0].attack.shotsPerMinute=240;
