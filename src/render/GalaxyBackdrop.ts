@@ -11,7 +11,8 @@ export class GalaxyBackdrop {
   private readonly sourceAspect = 1600 / 900;
   private state: 'loading'|'loaded'|'fallback' = 'loading';
   static readonly path = 'art/backgrounds/galaxy-v2.webp';
-  constructor(private readonly parent: THREE.Group, private readonly host: HTMLDivElement) {
+  constructor(private readonly parent: THREE.Group, private readonly host: HTMLDivElement,
+    private readonly tint:number=0xffffff) {
     const geometry = new THREE.PlaneGeometry(1, 1);
     const material = new THREE.MeshBasicMaterial({
       color: 0x07152b, depthTest: false, depthWrite: false,
@@ -36,7 +37,7 @@ export class GalaxyBackdrop {
         texture.minFilter = THREE.LinearFilter;
         this.texture=texture;
         material.map=texture;
-        material.color.setHex(0xffffff);
+        material.color.setHex(this.tint);
         material.needsUpdate=true;
         this.state='loaded';
         this.updateCrop();
