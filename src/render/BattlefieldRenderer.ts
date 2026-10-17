@@ -35,6 +35,7 @@ export class BattlefieldRenderer {
   private readonly playerMesh: THREE.Group;
   private readonly playerVisual: THREE.Group;
   private readonly playerMotion = new PlayerShipMotion();
+  private readonly engineCores: THREE.Mesh[] = [];
   private readonly composition = compositionFromSearch(window.location.search);
   private readonly lightVariant = p4LightVariantFromSearch(window.location.search);
   private readonly reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -145,6 +146,9 @@ export class BattlefieldRenderer {
     this.playerMesh = new THREE.Group();
     this.playerMesh.name='authoritative-player-xy';
     this.playerVisual = templates.player;
+    this.playerVisual.traverse(part=>{
+      if(part instanceof THREE.Mesh && part.name==='engine-core')this.engineCores.push(part);
+    });
     this.playerMesh.add(this.playerVisual);
     this.layers.combat.add(this.playerMesh);
     // Three meshes are static assets; InstancedMesh allows 24 scouts (and more)
@@ -264,6 +268,15 @@ export class BattlefieldRenderer {
     const pose=this.playerMotion.update(state.player.position.x,state.tick,state.phase,performance.now(),this.reducedMotion);
     this.playerVisual.rotation.set(pose.pitch,pose.yaw,pose.roll);
     this.playerVisual.position.set(0,pose.offsetY,pose.offsetZ);
+    // Only the visible twin exhaust cores change size/intensity: XY pivot and shot origin stay fixed.
+    const thrust=this.reducedMotion?.30:this.playerMotion.thrust;
+    for(const core of this.engineCores){
+      core.scale.y=.06*(.72+thrust*.9);
+      const mat=core.material;
+      if(mat instanceof THREE.MeshStandardMaterial)mat.emissiveIntensity=.45+thrust*.75;
+    }
+    this.host.dataset.playerFlightStage=this.playerMotion.stage;
+    this.host.dataset.playerThrust=thrust.toFixed(4);
     this.host.dataset.visualRoll=pose.roll.toFixed(5);
     this.host.dataset.visualYaw=pose.yaw.toFixed(5);
     this.host.dataset.visualPitch=pose.pitch.toFixed(5);
