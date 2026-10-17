@@ -1,6 +1,9 @@
 import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../core/engine.ts';
 import { ENEMY_SIZES, type EnemyKind, type LevelPlan, type WavePlan } from '../core/level.ts';
 import { containsRect, validateWorld } from '../core/world.ts';
+import { resolveVisualTheme, type VisualThemeId } from './visualThemes.ts';
+
+export type ThemedLevelPlan = LevelPlan & Readonly<{visualTheme:VisualThemeId;visualThemeWarning:string|null}>;
 
 export class LevelValidationError extends Error {
   constructor(message: string) { super('关卡数据无效：' + message); this.name = 'LevelValidationError'; }
@@ -31,14 +34,15 @@ function label(v: unknown, path: string, max: number): string {
 }
 
 /** 严格拒绝非法/未知字段与非法数值，不进行静默默认填充。 */
-export function parseLevel(input: unknown): LevelPlan {
+export function parseLevel(input: unknown): ThemedLevelPlan {
   // 首先报告不兼容版本，不能被其他字段缺失的次生错误遮蔽。
   if (input !== null && typeof input === 'object' && !Array.isArray(input) &&
       Object.prototype.hasOwnProperty.call(input, 'schemaVersion') &&
       (input as Record<string, unknown>).schemaVersion !== 1) {
     throw new LevelValidationError('不支持的 schemaVersion');
   }
-  const root = obj(input, '关卡', ['schemaVersion', 'id', 'metadata', 'world', 'waves', 'difficulty', 'victory']);
+  const root = obj(input, '关卡', ['schemaVersion', 'id', 'metadata', 'world', 'waves', 'difficulty', 'victory'], ['visualTheme']);
+  const theme=resolveVisualTheme(root.visualTheme);
   if (root.schemaVersion !== 1) throw new LevelValidationError('不支持的 schemaVersion');
   const metadata = obj(root.metadata, 'metadata', ['name', 'description']);
   const w = obj(root.world, 'world', ['width', 'height']);
@@ -112,6 +116,7 @@ export function parseLevel(input: unknown): LevelPlan {
   if (waves[0].spawnAtSeconds !== 0) throw new LevelValidationError('第一波 spawnAtSeconds 必须为 0');
   return Object.freeze({
     schemaVersion: 1, id: id(root.id, 'id'),
+    visualTheme:theme.id, visualThemeWarning:theme.warning,
     metadata: Object.freeze({
       name: label(metadata.name, 'metadata.name', 48),
       description: label(metadata.description, 'metadata.description', 240),
@@ -122,5 +127,5 @@ export function parseLevel(input: unknown): LevelPlan {
       fireRateMultiplier: num(d.fireRateMultiplier, 'difficulty.fireRateMultiplier', 0.1, 5),
     }),
     victory: Object.freeze({ type: 'clear-all-waves' }),
-  } satisfies LevelPlan);
+  } satisfies ThemedLevelPlan);
 }

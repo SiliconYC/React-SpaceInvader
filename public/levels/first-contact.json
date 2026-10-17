@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "first-contact",
+  "visualTheme": "nebula-blue",
   "metadata": {
     "name": "第一关 · 初次接触",
     "description": "第一关：单发轻型侦察机，熟悉射击、移动与规避。"

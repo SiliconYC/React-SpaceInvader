@@ -54,6 +54,11 @@ export class RingedPlanet {
     parent.add(this.group);
     this.owned.push(geo,bodyMaterial,annulus,bandMaterial);
   }
+  /** Theme uses only existing materials, no new geometry, loads or shader programs. */
+  setTint(tint:number):void{
+    (this.sphere.material as THREE.MeshStandardMaterial).color.setHex(tint);
+    (this.ring.material as THREE.MeshStandardMaterial).color.setHex(tint);
+  }
   resize(layout:CombatProjection,width:number,height:number):void{
     const portrait=width/height<.9;
     const radius=Math.min(portrait?1.25:1.55,layout.spanY*(portrait ? .032 : .06));

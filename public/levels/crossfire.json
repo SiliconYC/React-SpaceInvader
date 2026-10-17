@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "crossfire",
+  "visualTheme": "violet-drift",
   "metadata": {
     "name": "第二关 · 交叉火力",
     "description": "第二关：双波次，袭击机双列齐射，重装守卫机需两次命中。"
