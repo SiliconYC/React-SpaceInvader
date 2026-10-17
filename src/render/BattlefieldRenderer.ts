@@ -166,14 +166,15 @@ export class BattlefieldRenderer {
     this.resources.push(dust,dustMat);
     this.layers.starfield.add(new THREE.Points(dust,dustMat));
 
-    this.bulletGeometry = new THREE.CapsuleGeometry(0.10, 0.35, 4, 8);
+    // Small legible short projectiles, no stretched screen-covering light beams.
+    this.bulletGeometry = new THREE.CapsuleGeometry(0.09, 0.22, 3, 6);
     this.bulletMaterial = new THREE.MeshStandardMaterial({
-      color: 0xd8f9ff, emissive: 0x51cfff, emissiveIntensity: 1.9,
-      metalness: 0.1, roughness: 0.2,
+      color: P3_COLORS.playerShot, emissive: P3_COLORS.thrust, emissiveIntensity: .95,
+      metalness: 0.02, roughness: .32,
     });
     this.enemyBulletMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffb6a0, emissive: 0xef553f, emissiveIntensity: 1.25,
-      metalness: 0.08, roughness: 0.3,
+      color: P3_COLORS.enemyShot, emissive: 0xc95844, emissiveIntensity: .65,
+      metalness: .02, roughness: .38,
     });
     this.resources.push(this.bulletGeometry, this.bulletMaterial, this.enemyBulletMaterial);
     this.effects = new CombatFX(this.layers.combat,this.world);
@@ -315,6 +316,8 @@ export class BattlefieldRenderer {
     this.host.dataset.foregroundCount=String(this.layers.foregroundCount);
     this.host.dataset.foregroundVisible=String(this.layers.visibleForegroundCount);
     this.host.dataset.fxActive = String(this.effects.active);
+    this.host.dataset.fxAllocated = String(this.effects.allocatedMeshes);
+    this.host.dataset.fxReusable = String(this.effects.reusableMeshes);
     this.host.dataset.fxEmitted = String(this.effects.events);
     this.host.dataset.fxArmorEvents=String(this.effects.armorEvents);
     this.host.dataset.fxKind = this.effects.kind;
