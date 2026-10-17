@@ -11,6 +11,7 @@ import { CombatSceneLayers, SCENE_LAYER_ORDER } from './CombatSceneLayers.ts';
 import { GalaxyBackdrop } from './GalaxyBackdrop.ts';
 import { RingedPlanet } from './RingedPlanet.ts';
 import { AsteroidField } from './AsteroidField.ts';
+import { ForegroundRocks } from './ForegroundRocks.ts';
 
 /** 世界坐标在二维，z 仅为渲染层深度，不参与任何游戏规则。 */
 export function toDisplayXY(point: Point2, world: World2): THREE.Vector3 {
@@ -24,6 +25,7 @@ export class BattlefieldRenderer {
   private readonly galaxy: GalaxyBackdrop;
   private readonly planet: RingedPlanet;
   private readonly asteroids: AsteroidField;
+  private readonly foregroundRocks: ForegroundRocks;
   private readonly camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
   private readonly world: Readonly<World2>;
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
@@ -98,6 +100,8 @@ export class BattlefieldRenderer {
     this.scene.background = new THREE.Color(0x07152b);
     this.galaxy = new GalaxyBackdrop(this.layers.starfield, this.host);
     this.asteroids = new AsteroidField(this.layers.environment);
+    this.foregroundRocks = new ForegroundRocks(this.layers,this.world);
+    this.host.dataset.foregroundRocks = String(this.foregroundRocks.count);
     this.host.dataset.asteroidBatches=String(this.asteroids.batches);
     this.planet = new RingedPlanet(this.layers.celestial,
       new URLSearchParams(window.location.search).get('planetInspect') === 'side');
@@ -221,6 +225,7 @@ export class BattlefieldRenderer {
     this.galaxy.resize(layout,this.camera,width,height);
     this.planet.resize(layout,width,height);
     this.asteroids.resize(layout,width,height);
+    this.foregroundRocks.resize(layout,this.camera,width,height);
     this.host.dataset.planetRadius=this.planet.group.scale.x.toFixed(3);
     if (!this.contextLost) this.renderer.setSize(width, height, false);
     this.host.dataset.cameraProjection = isPerspective ? 'perspective' : 'orthographic';
@@ -271,7 +276,12 @@ export class BattlefieldRenderer {
     this.host.dataset.outcome = state.outcome ?? '';
     this.effects.update(state.phase,this.camera);
     this.planet.update(state.tick,window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false);
-    this.asteroids.update(state.tick,window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false);
+    this.asteroids.update(state.tick,this.reducedMotion);
+    this.foregroundRocks.update(state.tick,this.reducedMotion);
+    this.layers.refresh(this.world,this.camera,this.host.clientWidth,this.host.clientHeight,
+      window.matchMedia?.('(pointer:coarse)').matches??false);
+    this.host.dataset.foregroundVisible=String(this.foregroundRocks.visibleCount);
+    this.host.dataset.foregroundMotion=String(state.tick);
     this.host.dataset.asteroidVisible=String(this.asteroids.visibleCount);
     this.host.dataset.asteroidMotion=String(state.tick);
     this.host.dataset.planetRotation=this.planet.group.rotation.y.toFixed(5);
@@ -438,6 +448,7 @@ export class BattlefieldRenderer {
     this.galaxy.dispose();
     this.planet.dispose();
     this.asteroids.dispose();
+    this.foregroundRocks.dispose();
     this.layers.dispose();
     for (const resource of this.resources) resource.dispose();
     this.renderer.dispose();
