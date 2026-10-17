@@ -61,7 +61,7 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   const player=new THREE.Group();
   player.name='q-player-pivot';
   const ceramic=track(new THREE.MeshPhysicalMaterial({
-    color:0xf0f6ef,roughness:.42,metalness:.06,clearcoat:.32,clearcoatRoughness:.4,
+    color:P3_COLORS.ceramic,roughness:.42,metalness:.06,clearcoat:.32,clearcoatRoughness:.4,
   }));
   const blue=track(new THREE.MeshStandardMaterial({
     color:0x4daed1,roughness:.42,metalness:.13,side:THREE.DoubleSide,
@@ -70,7 +70,7 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
     color:0x265c80,roughness:.5,metalness:.19,side:THREE.DoubleSide,
   }));
   const glass=track(new THREE.MeshPhysicalMaterial({
-    color:0x133a58,roughness:.14,metalness:.19,clearcoat:1,clearcoatRoughness:.1,
+    color:0x133a58,roughness:.28,metalness:.19,clearcoat:1,clearcoatRoughness:.1,
     emissive:0x0b3554,emissiveIntensity:.08,
   }));
   const metal=track(new THREE.MeshStandardMaterial({
@@ -162,12 +162,12 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   const scoutPale=armor(0xffdfad,.025);
   const scoutShadow=armor(0xb96a43,.025);
   const scoutOptic=track(new THREE.MeshPhysicalMaterial({
-    color:0x102d43,roughness:.17,metalness:.28,clearcoat:.95,clearcoatRoughness:.12,
+    color:0x102d43,roughness:.28,metalness:.28,clearcoat:.95,clearcoatRoughness:.12,
     emissive:0x102d43,emissiveIntensity:.06,
   }));
   const scoutLens=track(new THREE.MeshPhysicalMaterial({
     color:0xffe5b5,emissive:0xffb25d,emissiveIntensity:.38,
-    roughness:.2,metalness:.08,clearcoat:.8,
+    roughness:.30,metalness:.08,clearcoat:.8,
   }));
   const addScout=(geometry:THREE.BufferGeometry,material:THREE.Material,name:string,
     x=0,y=0,z=0):THREE.Mesh=>{
