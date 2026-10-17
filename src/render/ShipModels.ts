@@ -156,21 +156,70 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   player.userData.geometrySource='src/render/P4PlayerGeometry.ts';
   player.traverse(node=>{if(node instanceof THREE.Mesh){node.castShadow=false;node.receiveShadow=false;}});
 
-  // P3/B2: 三种原创 Q 版敌机均为可编辑真 3D Mesh，实例化仍按部件而非敌机分配。
-  // 侦察机：纤长三叉/燕翼，单中央凸眼和高背甲壳。宽约 1.72 单位。
-  const scout = new THREE.Group();
-  const scoutPale=armor(P3_COLORS.scoutTrim,.04);
-  hull(scout,[0,-.54,-.24,-.27,-.83,-.38,-.68,.06,-.32,.37,
-    0,.28,.32,.37,.68,.06,.83,-.38,.24,-.27],.29,scoutMetal,-.07);
-  for(const side of [-1,1]){
-    hull(scout,[side*.20,-.21,side*.36,.23,side*.72,.03,
-      side*.66,-.07,side*.39,-.26],.085,scoutPale,.19);
-    box(scout,[.10,.23,.14],[side*.72,-.25,.23],scoutMetal,side*.16);
+  // P4/A3: light scout made from genuine continuous shell and slender chamfered wing solids.
+  // Optimised for a 24+ unit InstancedMesh squad: one draw per shared part, not one draw per ship.
+  const scout=new THREE.Group();
+  const scoutPale=armor(0xffdfad,.025);
+  const scoutShadow=armor(0xb96a43,.025);
+  const scoutOptic=track(new THREE.MeshPhysicalMaterial({
+    color:0x102d43,roughness:.28,metalness:.28,clearcoat:.95,clearcoatRoughness:.12,
+    emissive:0x102d43,emissiveIntensity:.06,
+  }));
+  const scoutLens=track(new THREE.MeshPhysicalMaterial({
+    color:0xffe5b5,emissive:0xffb25d,emissiveIntensity:.38,
+    roughness:.30,metalness:.08,clearcoat:.8,
+  }));
+  const addScout=(geometry:THREE.BufferGeometry,material:THREE.Material,name:string,
+    x=0,y=0,z=0):THREE.Mesh=>{
+    const mesh=new THREE.Mesh(track(geometry),material);
+    mesh.name=name;mesh.position.set(x,y,z);scout.add(mesh);return mesh;
+  };
+  addScout(createHullLoft([
+    {y:-.55,radiusX:.018,centerZ:.10,radiusZ:.018},
+    {y:-.39,radiusX:.19,centerZ:.13,radiusZ:.13},
+    {y:-.13,radiusX:.31,centerZ:.16,radiusZ:.19},
+    {y:.19,radiusX:.24,centerZ:.17,radiusZ:.18},
+    {y:.36,radiusX:.095,centerZ:.15,radiusZ:.10},
+  ],16),scoutMetal,'scout-continuous-orange-shell');
+  // Crescent-like swept wings: taper to rounded short outer wingtips, no paper-thin extrusions.
+  const wings=[
+    {x:.20,leadingY:.23,trailingY:-.31,z:.07,thickness:.15},
+    {x:.42,leadingY:.19,trailingY:-.12,z:.055,thickness:.13},
+    {x:.74,leadingY:.25,trailingY:-.21,z:.015,thickness:.075},
+    {x:.91,leadingY:.16,trailingY:-.25,z:.02,thickness:.038},
+  ] as const;
+  for(const side of [-1,1] as const){
+    addScout(createWingAirfoil(wings,side),scoutMetal,
+      side<0?'scout-port-airfoil':'scout-starboard-airfoil');
+    addScout(createWingAirfoil([
+      {x:.39,leadingY:.143,trailingY:.005,z:.147,thickness:.020},
+      {x:.64,leadingY:.192,trailingY:-.055,z:.092,thickness:.016},
+      {x:.87,leadingY:.142,trailingY:-.187,z:.062,thickness:.009},
+    ],side),scoutPale,'scout-deliberate-wing-inlay');
+    addScout(createHullLoft([
+      {y:.11,radiusX:.060,centerZ:.10,radiusZ:.055},
+      {y:.23,radiusX:.105,centerZ:.13,radiusZ:.10},
+      {y:.39,radiusX:.07,centerZ:.13,radiusZ:.06},
+    ],10),scoutShadow,'scout-rear-thruster-pod',side*.35);
+    const thruster=new THREE.Mesh(track(new THREE.SphereGeometry(1,12,8)),scoutGlow);
+    thruster.name='scout-exhaust';thruster.scale.set(.065,.07,.065);
+    thruster.position.set(side*.35,.39,.15);scout.add(thruster);
   }
-  dome(scout,[.25,.34,.24],[0,-.06,.27],scoutMetal);
-  dome(scout,[.17,.18,.18],[0,-.12,.47],dark);
-  dome(scout,[.095,.10,.10],[0,-.14,.60],scoutGlow);
-  box(scout,[.13,.08,.09],[0,.27,.32],scoutPale);
+  const frame=new THREE.Mesh(track(new THREE.SphereGeometry(1,18,12)),scoutShadow);
+  frame.name='scout-optical-gasket';frame.scale.set(.238,.233,.12);
+  frame.position.set(0,-.112,.330);scout.add(frame);
+  const eye=new THREE.Mesh(track(new THREE.SphereGeometry(1,24,14)),scoutOptic);
+  eye.name='scout-main-single-optic';eye.scale.set(.182,.179,.13);
+  eye.position.set(0,-.132,.400);scout.add(eye);
+  const specular=new THREE.Mesh(track(new THREE.SphereGeometry(1,12,8)),scoutLens);
+  specular.name='scout-eye-inner-lens';specular.scale.set(.078,.072,.038);
+  specular.position.set(-.035,-.163,.518);scout.add(specular);
+  addScout(createHullLoft([
+    {y:-.57,radiusX:.013,centerZ:.187,radiusZ:.013},
+    {y:-.42,radiusX:.068,centerZ:.231,radiusZ:.038},
+    {y:-.25,radiusX:.083,centerZ:.272,radiusZ:.036},
+  ],12),scoutPale,'scout-braced-nose');
+  scout.userData.geometrySource='src/render/P4PlayerGeometry.ts';
 
   // 袭击机：更宽的双钳翼、相互分离的炮舱和下压机鼻，明显不是 Scout 换色。
   const raider = new THREE.Group();
