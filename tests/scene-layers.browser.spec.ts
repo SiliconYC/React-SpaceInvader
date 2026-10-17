@@ -6,8 +6,9 @@ test('P3/A2: 分层稳定，不渲染工程背板；触边射击与横竖屏回�
   const stage=page.getByTestId('battlefield');
   await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
   await expect(stage).toHaveAttribute('data-scene-layers','starfield,celestial,environment,combat,foreground');
-  await expect(stage).toHaveAttribute('data-foreground-count','0');
-  await expect(stage).toHaveAttribute('data-foreground-visible','0');
+  // #36 originally verified an empty foreground; #45 now supplies four strictly gated meshes.
+  await expect(stage).toHaveAttribute('data-foreground-count','4');
+  await expect.poll(async()=>Number(await stage.getAttribute('data-foreground-visible'))).toBeGreaterThan(0);
   await page.screenshot({path:info.outputPath('p3-layer-desktop.png'),fullPage:true});
   await page.getByRole('button',{name:'开始',exact:true}).click();
   await page.keyboard.down('ArrowRight');
