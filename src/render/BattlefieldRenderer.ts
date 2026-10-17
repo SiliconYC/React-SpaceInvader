@@ -9,6 +9,7 @@ import { CombatFX } from './CombatFX.ts';
 import { combatProjection } from './CombatProjection.ts';
 import { CombatSceneLayers, SCENE_LAYER_ORDER } from './CombatSceneLayers.ts';
 import { GalaxyBackdrop } from './GalaxyBackdrop.ts';
+import { RingedPlanet } from './RingedPlanet.ts';
 
 /** 世界坐标在二维，z 仅为渲染层深度，不参与任何游戏规则。 */
 export function toDisplayXY(point: Point2, world: World2): THREE.Vector3 {
@@ -20,6 +21,7 @@ export class BattlefieldRenderer {
   private readonly scene = new THREE.Scene();
   private readonly layers = new CombatSceneLayers(this.scene);
   private readonly galaxy: GalaxyBackdrop;
+  private readonly planet: RingedPlanet;
   private readonly camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
   private readonly world: Readonly<World2>;
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
@@ -93,6 +95,9 @@ export class BattlefieldRenderer {
     // Full-viewport sky, no box backboard, marker corners or engineering frame.
     this.scene.background = new THREE.Color(0x07152b);
     this.galaxy = new GalaxyBackdrop(this.layers.starfield, this.host);
+    this.planet = new RingedPlanet(this.layers.celestial,
+      new URLSearchParams(window.location.search).get('planetInspect') === 'side');
+    this.host.dataset.planetMeshes=String(this.planet.meshes);
     const halfW = this.world.width / 2;
     const halfH = this.world.height / 2;
 
@@ -210,6 +215,8 @@ export class BattlefieldRenderer {
     this.camera.updateProjectionMatrix();
     this.camera.updateMatrixWorld(true);
     this.galaxy.resize(layout,this.camera,width,height);
+    this.planet.resize(layout,width,height);
+    this.host.dataset.planetRadius=this.planet.group.scale.x.toFixed(3);
     if (!this.contextLost) this.renderer.setSize(width, height, false);
     this.host.dataset.cameraProjection = isPerspective ? 'perspective' : 'orthographic';
     this.host.dataset.cameraFov = isPerspective ? String(layout.fovDegrees) : '0';
@@ -258,6 +265,8 @@ export class BattlefieldRenderer {
     this.host.dataset.gamePhase = state.phase;
     this.host.dataset.outcome = state.outcome ?? '';
     this.effects.update(state.phase,this.camera);
+    this.planet.update(state.tick,window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false);
+    this.host.dataset.planetRotation=this.planet.group.rotation.y.toFixed(5);
     if (this.modelPreview) {
       const isPlayer=this.modelPreview==='player';
       const tilted=new URLSearchParams(window.location.search).get('shipAngle')==='tilt';
@@ -419,6 +428,7 @@ export class BattlefieldRenderer {
     this.enemyProjectileMeshes.clear();
     this.effects.dispose();
     this.galaxy.dispose();
+    this.planet.dispose();
     this.layers.dispose();
     for (const resource of this.resources) resource.dispose();
     this.renderer.dispose();
