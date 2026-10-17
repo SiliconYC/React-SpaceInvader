@@ -18,9 +18,6 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
     color, emissive: color, emissiveIntensity: .95, roughness: .2, metalness: .18,
   }));
   const dark = armor(0x243c56, 0.02);
-  const playerMetal = armor(0x6fc8dc, .12);
-  const playerRim = armor(0xe8f8fa, .08);
-  const playerGlow = gleam(0x37e8fa);
   const scoutMetal = armor(0xf0ae77, .12);
   const scoutGlow = gleam(0xffce92);
   const raiderMetal = armor(0xd97baa, .12);
