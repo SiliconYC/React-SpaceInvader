@@ -245,7 +245,7 @@ export default function App() {
       <div className="score-hud" aria-label="游戏成绩">
         <span data-testid="score">分数 <strong>{state.score}</strong></span>
         <span className="wave-hud" data-testid="wave-status">波次 {state.currentWave}/{state.totalWaves}</span>
-        <span className="life-indicator" data-testid="lives">生命 <strong>{state.lives}</strong></span>
+        <span className="life-indicator" data-testid="lives">生命 <svg className="life-ship" viewBox="0 0 32 28" aria-hidden="true" focusable="false"><path d="M16 2 22 12 30 19 27 24 21 22 16 26 11 22 5 24 2 19 10 12Z" fill="#E9F5FC"/><path d="M16 7 20 15 16 20 12 15Z" fill="#287CA6"/><path d="M5 21 11 19 16 23 21 19 27 21" stroke="#58DDF3" strokeWidth="2" strokeLinecap="round"/></svg> <strong>{state.lives}</strong></span>
       </div>
       {state.phase === 'ready' && catalog && !loadError &&
         <p className="level-description" data-testid="level-description">
@@ -264,7 +264,7 @@ export default function App() {
         </div>
       )}
       {state.phase === 'paused' && <span className="pause-overlay" data-testid="pause-message">已暂停</span>}
-      <div className="control-hint">← → / A D <span>移动</span><span>空格 · 射击</span></div>
+      {state.phase==='ready' && <div className="control-hint">← → / A D <span>移动</span><span>空格 · 射击</span></div>}
       <nav className="touch-controls" aria-label="触屏战斗控制">
         <div className="touch-movement">
           {(['left','right'] as const).map(action=>
