@@ -20,8 +20,9 @@ test('空格长按击毁 JSON 指定的敌机，分数即时增加，暂停不�
   await expect(stage).toHaveAttribute('data-enemy-count', '1');
   await page.getByRole('button', { name: '开始', exact: true }).click();
   await page.keyboard.down('Space');
-  await expect.poll(async () => Number(await stage.getAttribute('data-bullet-count'))).toBeGreaterThan(0);
-  await expect.poll(async () => Number(await stage.getAttribute('data-score')), { timeout: 8000 }).toBe(10);
+  // A fast bullet can be spawned and hit between two DOM polls on a slow remote
+  // SwiftShader renderer; an authoritative score increment proves the real hit.
+  await expect.poll(async () => Number(await stage.getAttribute('data-score')), { timeout: 15000 }).toBe(10);
   await expect(stage).toHaveAttribute('data-enemy-count', '0');
   await page.keyboard.up('Space');
   await expect(page.getByTestId('score')).toContainText('10');
