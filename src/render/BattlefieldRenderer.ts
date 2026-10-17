@@ -26,6 +26,7 @@ export class BattlefieldRenderer {
     readonly mesh: THREE.InstancedMesh; readonly localMatrix: THREE.Matrix4
   }>> = {scout:[],raider:[],guardian:[]};
   private readonly tempMatrix = new THREE.Matrix4();
+  private lastPlayerPoint: THREE.Vector3 | null = null;
   private readonly projectileMeshes = new Map<number, THREE.Mesh>();
   private readonly enemyProjectileMeshes = new Map<number, THREE.Mesh>();
   private readonly enemyBulletMaterial: THREE.MeshStandardMaterial;
@@ -193,7 +194,15 @@ export class BattlefieldRenderer {
     this.host.dataset.cameraSpanX = layout.spanX.toFixed(3);
     this.host.dataset.cameraSpanY = layout.spanY.toFixed(3);
     this.host.dataset.cameraCenterY = layout.centerY.toFixed(3);
+    this.updatePlayerScreenPosition();
     this.layers.refresh(this.world,this.camera,width,height,coarse);
+  }
+
+  private updatePlayerScreenPosition(): void {
+    if (!this.lastPlayerPoint) return;
+    const projected = this.lastPlayerPoint.clone().project(this.camera);
+    this.host.dataset.playerScreenX = ((projected.x + 1) * .5 * this.host.clientWidth).toFixed(3);
+    this.host.dataset.playerScreenY = ((1 - projected.y) * .5 * this.host.clientHeight).toFixed(3);
   }
 
   render(state: GameSnapshot): void {
@@ -204,9 +213,8 @@ export class BattlefieldRenderer {
     const point = toDisplayXY(state.player.position, state.world);
     this.playerMesh.position.copy(point);
     // Project with the actual Three.js camera, rather than an unrelated CSS approximation.
-    const projected = point.clone().project(this.camera);
-    this.host.dataset.playerScreenX = ((projected.x + 1) * .5 * this.host.clientWidth).toFixed(3);
-    this.host.dataset.playerScreenY = ((1 - projected.y) * .5 * this.host.clientHeight).toFixed(3);
+    this.lastPlayerPoint = point;
+    this.updatePlayerScreenPosition();
     this.host.dataset.playerX = state.player.position.x.toFixed(4);
     this.host.dataset.playerY = state.player.position.y.toFixed(4);
     this.syncEnemies(state);
