@@ -19,6 +19,9 @@ interface Particle {
 export class CombatFX {
   readonly maxParticles = 72;
   private readonly pool: Particle[] = [];
+  /** Recycles WebGL scene nodes; geometry/material are shared across every flash. */
+  private readonly spare: THREE.Mesh[] = [];
+  private allocated = 0;
   private readonly seen = new Set<string>();
   private readonly keys: string[] = [];
   private readonly geometries: readonly THREE.BufferGeometry[];
@@ -30,7 +33,11 @@ export class CombatFX {
   private lastKinds = '';
 
   constructor(private readonly scene: THREE.Group, private readonly world: World2) {
-    this.geometries = [new THREE.IcosahedronGeometry(.13,0),new THREE.RingGeometry(.32,.4,12)];
+    this.geometries = [
+      new THREE.TetrahedronGeometry(.15,0),
+      new THREE.RingGeometry(.27,.345,16),
+      new THREE.OctahedronGeometry(.12,0),
+    ];
     const material = (color:number,opacity:number) => new THREE.MeshBasicMaterial({
       color, transparent:true, opacity, depthWrite:false, side:THREE.DoubleSide,
       toneMapped:false,
@@ -55,13 +62,21 @@ export class CombatFX {
     for(let i=0;i<limit;i++){
       if(this.pool.length>=this.maxParticles){
         const old=this.pool.shift();
-        if(old) this.scene.remove(old.mesh);
+        if(old)this.release(old.mesh);
       }
       const angle=(i * 2.39996 + seed * .37 + tick * .13);
       const radius=kind==='wave' ? .14 : .07;
       const drift=kind==='muzzle' ? .13 : kind==='wave' ? .9 : .4;
-      const mesh=new THREE.Mesh(this.geometries[kind==='wave'||kind==='finish'?1:0],this.materials[kind]);
-      mesh.position.set(center.x+Math.cos(angle)*radius,center.y+Math.sin(angle)*radius,.86);
+      const geometry=this.geometries[kind==='wave'||kind==='finish'||(kind==='armor'&&i===0)
+        ? 1 : kind==='muzzle'?2:0];
+      const mesh=this.spare.pop() ?? new THREE.Mesh();
+      if(!mesh.userData.fxAllocated){mesh.userData.fxAllocated=true;this.allocated++;}
+      mesh.geometry=geometry;
+      mesh.material=this.materials[kind];
+      mesh.position.set(center.x+Math.cos(angle)*radius,center.y+Math.sin(angle)*radius,
+        .80+(kind==='burst'?Math.sin(angle)*.11:0));
+      mesh.rotation.set(angle*.19,angle*.27,angle);
+      mesh.visible=true;
       this.scene.add(mesh);
       this.pool.push({
         mesh,born:now,life:duration,x:mesh.position.x,y:mesh.position.y,
@@ -121,10 +136,12 @@ export class CombatFX {
       const p=this.pool[i];
       const t=(now-p.born)/p.life;
       if(t>=1){
-        this.scene.remove(p.mesh);this.pool.splice(i,1);continue;
+        this.release(p.mesh);this.pool.splice(i,1);continue;
       }
       p.mesh.position.x=p.x+p.dx*t;
       p.mesh.position.y=p.y+p.dy*t;
+      p.mesh.rotation.z+=this.reduceMotion?0:.019;
+      p.mesh.rotation.x+=this.reduceMotion?0:.012;
       p.mesh.scale.setScalar(p.scale*(p.kind==='wave'||p.kind==='finish'?1+.8*t:1-t*.6));
     }
     const pulse = !this.reduceMotion && now<this.wavePulseUntil ?
@@ -133,15 +150,23 @@ export class CombatFX {
     if(Math.abs(camera.zoom-target)>1e-7){camera.zoom=target;camera.updateProjectionMatrix();}
   }
   get active():number{return this.pool.length;}
+  get allocatedMeshes():number{return this.allocated;}
+  get reusableMeshes():number{return this.spare.length;}
   get armorEvents():number{return this.armorEmitted;}
   get events():number{return this.emitted;}
   get kind():string{return this.lastKinds;}
+  private release(mesh:THREE.Mesh):void{
+    this.scene.remove(mesh);
+    mesh.visible=false;
+    this.spare.push(mesh);
+  }
   clear():void{
-    for(const p of this.pool)this.scene.remove(p.mesh);
+    for(const p of this.pool)this.release(p.mesh);
     this.pool.length=0;this.wavePulseUntil=0;
   }
   dispose():void{
     this.clear();this.keys.length=0;this.seen.clear();
+    this.spare.length=0;this.allocated=0;
     for(const g of this.geometries)g.dispose();
     for(const m of Object.values(this.materials))m.dispose();
   }
