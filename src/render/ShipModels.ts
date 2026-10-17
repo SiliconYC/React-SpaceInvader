@@ -57,14 +57,52 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
     group.add(mesh);
   }
 
-  // 玩家：细长中央机鼻 + 独立掠翼 + 双引擎喷口；尖端朝上，三维驾驶舱凸出。
+  // P3/B1: 源码即正式模型资产。真实体积来自挤出翼板、多个低面数椭球和双推进舱，
+  // 没有平面图片或外部 GLB。轮廓以约 2.34 × 1.43 单位落在原 2.5 × 1.4 的 XY hitbox 附近。
   const player = new THREE.Group();
-  hull(player, [0,.71,-.17,.29,-.39,.08,-1.17,-.39,-.99,-.62,-.33,-.42,0,-.54,
-                .33,-.42,.99,-.62,1.17,-.39,.39,.08,.17,.29], .32, playerMetal);
-  hull(player, [0,.58,-.18,.06,-.25,-.42,.25,-.42,.18,.06], .41, playerRim, .19);
-  dome(player, [.19,.29,.23], [0,-.05,.62], dark);
-  box(player,[.28,.19,.17],[-.47,-.47,.19],playerGlow);
-  box(player,[.28,.19,.17],[.47,-.47,.19],playerGlow);
+  player.name='q-player-pivot';
+  const ceramic = track(new THREE.MeshStandardMaterial({
+    color:0xe9f5fc,metalness:.12,roughness:.62,flatShading:true,
+  }));
+  const blue = track(new THREE.MeshStandardMaterial({
+    color:0x62c5e4,metalness:.14,roughness:.58,flatShading:true,
+  }));
+  const deepBlue = track(new THREE.MeshStandardMaterial({
+    color:0x287ca6,metalness:.2,roughness:.53,flatShading:true,
+  }));
+  const glass = track(new THREE.MeshStandardMaterial({
+    color:0x143959,metalness:.18,roughness:.28,flatShading:true,
+  }));
+  const thruster = track(new THREE.MeshStandardMaterial({
+    color:0x80edfb,emissive:0x37c6ef,emissiveIntensity:1.2,metalness:0,roughness:.4,
+  }));
+  // 实体宽翼：双侧以不同受光面构成厚度，翼尖圆角靠离散倒角而非复杂贴图。
+  hull(player,[
+    0,.68,-.22,.29,-.43,.13,-1.13,-.30,-1.17,-.45,-.72,-.42,
+    -.41,-.61,0,-.57,.41,-.61,.72,-.42,1.17,-.45,1.13,-.30,.43,.13,.22,.29,
+  ],.23,ceramic,-.09);
+  for(const side of [-1,1]){
+    hull(player,[
+      side*.37,.11,side*.61,-.01,side*1.05,-.32,side*1.08,-.39,
+      side*.75,-.35,side*.42,-.25,
+    ],.055,blue,.17);
+    // 可辨认的外缘翼鳍、后掠双色装甲和两个分离的发动机。
+    box(player,[.075,.27,.18],[side*1.01,-.34,.17],deepBlue,side*.15);
+    dome(player,[.18,.37,.19],[side*.43,-.34,.14],ceramic);
+    dome(player,[.14,.24,.14],[side*.43,-.50,.08],deepBlue);
+    dome(player,[.115,.10,.12],[side*.43,-.61,.12],thruster);
+    box(player,[.15,.06,.05],[side*.43,-.57,.28],blue);
+  }
+  // 大体量鼓起的机背与奶白色鼻锥；座舱明显高于翼板，旋转可观察厚度。
+  dome(player,[.30,.57,.25],[0,.02,.28],ceramic);
+  dome(player,[.19,.35,.17],[0,.07,.49],glass);
+  dome(player,[.12,.13,.08],[0,.25,.60],blue);
+  hull(player,[0,.73,-.16,.35,-.18,-.11,0,-.24,.18,-.11,.16,.35],
+    .12,ceramic,.39);
+  box(player,[.15,.21,.07],[0,-.39,.38],blue);
+  player.userData.modelKind='player';
+  player.userData.assetSource='src/render/ShipModels.ts#q-player-pivot';
+  player.traverse(node=>{if(node instanceof THREE.Mesh){node.castShadow=false;node.receiveShadow=false;}});
 
   // 侦察机：尖锐三叉翼、单个探测圆顶，识别轮廓：轻、窄、尖。
   const scout = new THREE.Group();
