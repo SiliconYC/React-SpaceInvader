@@ -20,13 +20,8 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   const gleam = (color: number) => track(new THREE.MeshStandardMaterial({
     color, emissive: color, emissiveIntensity: P3_LIGHTING.emissiveAccent, roughness: .35, metalness: .06,
   }));
-  const dark = armor(0x243c56, 0.02);
   const scoutMetal = armor(P3_COLORS.scout, .08);
   const scoutGlow = gleam(0xffce92);
-  const raiderMetal = armor(P3_COLORS.raider, .08);
-  const raiderGlow = gleam(0xffb7a7);
-  const guardianMetal = armor(P3_COLORS.guardian, .08);
-  const guardianGlow = gleam(0xaa9aff);
 
   function hull(group: THREE.Group, points: number[], depth: number, material: THREE.Material, z = 0): void {
     const shape = new THREE.Shape();
