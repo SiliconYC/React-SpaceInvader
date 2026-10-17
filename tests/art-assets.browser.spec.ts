@@ -9,7 +9,7 @@ test('P3/A3: 真正入库的原创参考图可以由 Chromium 解码，不是聊
   expect(svg).toMatch(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
   expect(svg).toContain('viewBox="0 0 1600 900"');
   expect(svg).toContain('</svg>');
-  expect(svg).not.toMatch(/<image\b|https?:\/\//g); // no externally loaded images
+  expect(svg).not.toMatch(/<image\b|(?:href|src)="https?:\/\//g); // no externally loaded images
   const data=Buffer.from(svg).toString('base64');
   await page.setViewportSize({width:1280,height:720});
   await page.setContent(`<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#07152b}img{display:block;width:100vw;height:100vh;object-fit:contain}</style></head><body><img alt="P3 Q 版原创美术参考" src="data:image/svg+xml;base64,${data}"></body></html>`);
