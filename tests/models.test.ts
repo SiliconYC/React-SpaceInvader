@@ -39,7 +39,7 @@ test('P3 玩家模型为多层可编辑 Three.js 实体，尺寸与 XY 命中盒
   assert.ok(bounds.max.x-bounds.min.x>=2.1);
   assert.ok(body.some(mesh=>mesh.geometry instanceof THREE.SphereGeometry),'真实圆润体积，不是平面贴图');
   assert.ok(body.some(mesh=>mesh.geometry instanceof THREE.ExtrudeGeometry),'机翼有真实厚度');
-  assert.ok(body.every(mesh=>(mesh.material as THREE.Material).map===undefined),'不依赖贴图');
+  assert.ok(body.every(mesh=>(mesh.material as THREE.MeshStandardMaterial).map==null),'不依赖贴图');
   const before=player.position.clone();
   player.rotation.set(.2,-.2,.2);
   assert.ok(player.position.equals(before),'三轴姿态只能影响可视模型，不更新逻辑位置');
