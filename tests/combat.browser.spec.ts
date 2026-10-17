@@ -46,9 +46,11 @@ test('空格释放后停止连发，游戏保持简洁大画布', async ({ page 
   const stage = page.getByTestId('battlefield');
   await page.getByRole('button', { name: '开始', exact: true }).click();
   await page.keyboard.down('Space');
-  await page.waitForTimeout(180);
-  await page.keyboard.up('Space');
+  // Observe the actual projectile while the key is held. By key-up it may have hit an enemy
+  // or exited the screen, so checking active projectiles afterwards is timing-flaky on SwiftShader.
   await expect.poll(async () => Number(await stage.getAttribute('data-bullet-count'))).toBeGreaterThan(0);
+  await page.waitForTimeout(90);
+  await page.keyboard.up('Space');
   await page.getByRole('button', { name: '暂停' }).click();
   const pausedCount = await stage.getAttribute('data-bullet-count');
   await page.waitForTimeout(170);
