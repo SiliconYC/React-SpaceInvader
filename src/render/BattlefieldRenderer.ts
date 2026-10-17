@@ -12,6 +12,7 @@ import { GalaxyBackdrop } from './GalaxyBackdrop.ts';
 import { RingedPlanet } from './RingedPlanet.ts';
 import { AsteroidField } from './AsteroidField.ts';
 import { ForegroundRocks } from './ForegroundRocks.ts';
+import { P3_COLORS, P3_LIGHTING, installP3Lighting } from './P3Palette.ts';
 
 /** 世界坐标在二维，z 仅为渲染层深度，不参与任何游戏规则。 */
 export function toDisplayXY(point: Point2, world: World2): THREE.Vector3 {
@@ -84,20 +85,17 @@ export class BattlefieldRenderer {
     this.renderer.setClearColor(0x050913, 1);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMappingExposure = P3_LIGHTING.toneMappingExposure;
     this.renderer.domElement.dataset.renderer = 'threejs';
     host.appendChild(this.renderer.domElement);
 
     // 镜头只根据视口改变投影尺寸，不改动逻辑世界的宽高或比例。
     this.camera.position.set(0, 0, 50);
     this.camera.lookAt(0, 0, 0);
-    this.scene.add(new THREE.AmbientLight(0x9ebad6, 1));
-    const key = new THREE.DirectionalLight(0x8baeca, 1.3);
-    key.position.set(-8, 12, 16);
-    this.scene.add(key);
+    installP3Lighting(this.scene);
 
     // Full-viewport sky, no box backboard, marker corners or engineering frame.
-    this.scene.background = new THREE.Color(0x07152b);
+    this.scene.background = new THREE.Color(P3_COLORS.space);
     this.galaxy = new GalaxyBackdrop(this.layers.starfield, this.host);
     this.asteroids = new AsteroidField(this.layers.environment);
     this.foregroundRocks = new ForegroundRocks(this.layers,this.world);
@@ -151,10 +149,6 @@ export class BattlefieldRenderer {
         this.layers.combat.add(instances);
       }
     }
-    this.scene.add(new THREE.HemisphereLight(0xb5d9ef, 0x10192a, .55));
-    const rim = new THREE.DirectionalLight(0x82d8ef, .75);
-    rim.position.set(8,-5,11);
-    this.scene.add(rim);
 
     // 少量低对比空间尘点；不产生网格感，也不覆盖战斗或改变相机。
     const points: number[] = [];
