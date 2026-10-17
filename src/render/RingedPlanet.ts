@@ -31,23 +31,23 @@ export class RingedPlanet {
     this.sphere=new THREE.Mesh(geo,bodyMaterial);
     this.sphere.name='actual-low-poly-sphere';
     this.group.add(this.sphere);
-    const annulus=new THREE.RingGeometry(1.38,2.13,64,6);
+    const annulus=new THREE.RingGeometry(1.46,2.08,64,6);
     const v=annulus.getAttribute('position');
     const rcolors=new Float32Array(v.count*3);
     for(let i=0;i<v.count;i++){
       const rr=Math.hypot(v.getX(i),v.getY(i));
-      const mix=(rr-1.38)/.75;
-      const color=new THREE.Color().setHSL(.68-.06*mix,.21,.33+.23*Math.sin(mix*Math.PI));
+      const mix=(rr-1.46)/.62;
+      const color=new THREE.Color().setHSL(.65-.07*mix,.19,.42+.15*Math.sin(mix*Math.PI));
       color.toArray(rcolors,i*3);
     }
     annulus.setAttribute('color',new THREE.BufferAttribute(rcolors,3));
     const bandMaterial=new THREE.MeshStandardMaterial({
       vertexColors:true,roughness:.9,side:THREE.DoubleSide,
-      transparent:true,opacity:.7,depthTest:true,depthWrite:false,
+      transparent:true,opacity:.59,depthTest:true,depthWrite:false,
     });
     this.ring=new THREE.Mesh(annulus,bandMaterial);
     this.ring.name='actual-tilted-3d-ring';
-    this.ring.rotation.set(.47,.12,-.15);
+    this.ring.rotation.set(1.02,.13,-.20);
     this.group.add(this.ring);
     this.group.position.z=-18;
     this.group.rotation.set(.07,.1,-.17);
@@ -56,10 +56,10 @@ export class RingedPlanet {
   }
   resize(layout:CombatProjection,width:number,height:number):void{
     const portrait=width/height<.9;
-    const radius=Math.min(portrait?1.65:2.8,layout.spanY*(portrait ? .065 : .105));
+    const radius=Math.min(portrait?1.25:1.55,layout.spanY*(portrait ? .032 : .06));
     this.group.scale.setScalar(radius);
     // Decorative sphere is behind gameplay in true depth, and deliberately displaced to the upper-right.
-    this.group.position.set(layout.spanX*.43,layout.centerY+layout.spanY*.32,-18);
+    this.group.position.set(layout.spanX*.38,layout.centerY+layout.spanY*.20,-18);
   }
   update(tick:number,reducedMotion=false):void{
     this.sphere.rotation.y=reducedMotion?0:tick*.0003;
