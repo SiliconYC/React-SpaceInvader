@@ -78,7 +78,8 @@ export default function App() {
         lastTime=null;
         if(lost){touchRef.current?.releaseAll();audioRef.current?.setVisible(false);}
         else audioRef.current?.setVisible(!document.hidden);
-      });
+      },level.visualTheme);
+      host.dataset.visualThemeWarning=level.visualThemeWarning??'';
       scene.setDebugVisible(new URLSearchParams(window.location.search).has('debug'));
       const keyboard = new KeyboardController(command => { engine.dispatch(command); });
       const touch = new TouchControls(command=>{engine.dispatch(command);});
