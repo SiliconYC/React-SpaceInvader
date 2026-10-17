@@ -25,9 +25,9 @@ test('P4/C2：三种敌机原生 WebGL 动态编队、事件姿态与批次不�
     await page.waitForTimeout(1200);
     const calls=Number(await stage.getAttribute('data-draw-calls'));
     expect(calls).toBeLessThan(65);
-    const current=await stage.getAttribute('data-enemy-visual-roll');
     await page.screenshot({path:info.outputPath('p4-c2-'+kind+'-flight.png')});
     await page.getByRole('button',{name:'暂停'}).click();
+    const current=await stage.getAttribute('data-enemy-visual-roll');
     await page.waitForTimeout(210);
     await expect(stage).toHaveAttribute('data-enemy-visual-roll',current??'');
     metrics.push({kind,calls,enemyCount:Number(await stage.getAttribute('data-enemy-count')),
