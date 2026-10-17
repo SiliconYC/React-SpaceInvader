@@ -73,7 +73,7 @@ export class AsteroidField{
         const driftX=Math.sin(elapsed*.13+phase)*.13;
         const driftY=Math.cos(elapsed*.17+phase)*.12;
         const z=-8-(index%4)*1.8;
-        const size=(.47+(index%5)*.09)*(this.isPortrait?.60:1);
+        const size=(.47+(index%5)*.09)*(this.isPortrait ? .60 : 1);
         this.translation.set(u*this.viewWidth+driftX,v*this.viewHeight+this.centerY+driftY,z);
         this.euler.set(index*.57+elapsed*.06,index*.31+elapsed*.045,index*.13+elapsed*.03);
         this.pose.setFromEuler(this.euler);
