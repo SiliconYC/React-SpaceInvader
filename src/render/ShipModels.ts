@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { EnemyKind } from '../core/level.ts';
 import { P3_COLORS, P3_LIGHTING } from './P3Palette.ts';
 import { createHullLoft, createWingAirfoil } from './P4PlayerGeometry.ts';
+import { sculptRaider, sculptGuardian } from './P4EnemyGeometry.ts';
 
 /** 造型素材均为原创参数化网格，单位皆位于 XY 逻辑平面，厚度只占显示用 z。 */
 export type GpuResource = THREE.BufferGeometry | THREE.Material;
@@ -19,13 +20,8 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   const gleam = (color: number) => track(new THREE.MeshStandardMaterial({
     color, emissive: color, emissiveIntensity: P3_LIGHTING.emissiveAccent, roughness: .35, metalness: .06,
   }));
-  const dark = armor(0x243c56, 0.02);
   const scoutMetal = armor(P3_COLORS.scout, .08);
   const scoutGlow = gleam(0xffce92);
-  const raiderMetal = armor(P3_COLORS.raider, .08);
-  const raiderGlow = gleam(0xffb7a7);
-  const guardianMetal = armor(P3_COLORS.guardian, .08);
-  const guardianGlow = gleam(0xaa9aff);
 
   function hull(group: THREE.Group, points: number[], depth: number, material: THREE.Material, z = 0): void {
     const shape = new THREE.Shape();
@@ -229,44 +225,9 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   ],12),scoutPale,'scout-braced-nose');
   scout.userData.geometrySource='src/render/P4PlayerGeometry.ts';
 
-  // 袭击机：更宽的双钳翼、相互分离的炮舱和下压机鼻，明显不是 Scout 换色。
-  const raider = new THREE.Group();
-  const raiderPale=armor(P3_COLORS.raiderTrim,.04);
-  hull(raider,[-.91,.36,-.48,.30,-.31,-.33,0,-.57,.31,-.33,
-    .48,.30,.91,.36,1.05,-.23,.75,-.43,.35,-.41,0,-.58,
-    -.35,-.41,-.75,-.43,-1.05,-.23],.34,raiderMetal,-.08);
-  for(const side of [-1,1]){
-    hull(raider,[side*.48,.23,side*.88,.23,side*.94,-.15,
-      side*.70,-.31,side*.47,-.23],.10,raiderPale,.23);
-    box(raider,[.25,.51,.32],[side*.72,-.20,.30],dark,side*.12);
-    box(raider,[.14,.34,.20],[side*.72,-.43,.32],raiderMetal);
-    dome(raider,[.12,.14,.095],[side*.72,-.59,.38],raiderGlow);
-  }
-  dome(raider,[.34,.44,.25],[0,-.02,.35],raiderMetal);
-  dome(raider,[.22,.28,.20],[0,-.01,.57],dark);
-  box(raider,[.23,.09,.10],[0,-.49,.36],raiderPale);
-
-  // 守卫机：宽重盾形装甲、双侧厚护肩和高起的发光能量核心。
-  const guardian = new THREE.Group();
-  const guardianPale=armor(P3_COLORS.guardianTrim,.04);
-  const guardianShadow=armor(0x655a9c,.02);
-  const core = gleam(0x79e4ef);
-  hull(guardian,[-1.07,.43,-1.17,-.12,-1.03,-.44,-.55,-.59,
-    0,-.60,.55,-.59,1.03,-.44,1.17,-.12,1.07,.43,.57,.68,-.57,.68],
-    .46,guardianMetal,-.10);
-  for(const side of [-1,1]){
-    hull(guardian,[side*.56,.54,side*1.05,.30,side*1.06,-.30,
-      side*.75,-.42,side*.55,-.15],.16,guardianShadow,.38);
-    hull(guardian,[side*.62,.40,side*.92,.26,side*.89,-.13,
-      side*.61,-.19],.10,guardianPale,.57);
-    box(guardian,[.19,.40,.28],[side*.84,-.18,.49],guardianMetal);
-    dome(guardian,[.11,.14,.10],[side*.87,-.34,.65],guardianGlow);
-  }
-  hull(guardian,[-.41,.44,-.48,-.29,0,-.44,.48,-.29,.41,.44],
-    .24,guardianPale,.44);
-  dome(guardian,[.38,.37,.26],[0,.06,.66],guardianShadow);
-  dome(guardian,[.25,.25,.23],[0,.02,.83],core);
-  dome(guardian,[.13,.13,.105],[-.04,.08,1.03],guardianPale);
+  // P4/B1: independently sculpted claws versus fortress shield; visuals do not touch collision.
+  const raider = sculptRaider(track);
+  const guardian = sculptGuardian(track);
 
   for (const [kind, group] of Object.entries({scout,raider,guardian})) {
     group.userData.modelKind=kind;
