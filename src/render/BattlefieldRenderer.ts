@@ -56,6 +56,9 @@ export class BattlefieldRenderer {
   private lastPlayerPoint: THREE.Vector3 | null = null;
   private readonly projectileMeshes = new Map<number, THREE.Mesh>();
   private readonly enemyProjectileMeshes = new Map<number, THREE.Mesh>();
+  private readonly sparePlayerShots:THREE.Mesh[]=[];
+  private readonly spareEnemyShots:THREE.Mesh[]=[];
+  private readonly enemyBulletGeometry: THREE.BufferGeometry;
   private readonly enemyBulletMaterial: THREE.MeshStandardMaterial;
   private readonly bulletGeometry: THREE.BufferGeometry;
   private readonly bulletMaterial: THREE.MeshStandardMaterial;
@@ -177,8 +180,14 @@ export class BattlefieldRenderer {
     this.resources.push(dust,dustMat);
     this.layers.starfield.add(new THREE.Points(dust,dustMat));
 
-    // Small legible short projectiles, no stretched screen-covering light beams.
-    this.bulletGeometry = new THREE.CapsuleGeometry(0.09, 0.22, 3, 6);
+    // P4/C3: authored short-tail silhouette built into ONE mesh/draw per shot.
+    // Player lances travel up, enemy copper darts down; no billboard smoke.
+    this.bulletGeometry = new THREE.LatheGeometry([
+      new THREE.Vector2(0,-.29),new THREE.Vector2(.038,-.20),
+      new THREE.Vector2(.085,-.055),new THREE.Vector2(.085,.13),
+      new THREE.Vector2(.035,.24),new THREE.Vector2(0,.27),
+    ],10);
+    this.enemyBulletGeometry=new THREE.ConeGeometry(.12,.38,7);
     this.bulletMaterial = new THREE.MeshStandardMaterial({
       color: P3_COLORS.playerShot, emissive: P3_COLORS.thrust, emissiveIntensity: .95,
       metalness: 0.02, roughness: .32,
@@ -187,7 +196,8 @@ export class BattlefieldRenderer {
       color: P3_COLORS.enemyShot, emissive: 0xc95844, emissiveIntensity: .65,
       metalness: .02, roughness: .38,
     });
-    this.resources.push(this.bulletGeometry, this.bulletMaterial, this.enemyBulletMaterial);
+    this.resources.push(this.bulletGeometry,this.enemyBulletGeometry,
+      this.bulletMaterial,this.enemyBulletMaterial);
     this.effects = new CombatFX(this.layers.combat,this.world);
 
     // 模型类型可调整外观，但队列数量、坐标和种类只来自纯逻辑快照.
@@ -337,6 +347,9 @@ export class BattlefieldRenderer {
     this.host.dataset.fxEmitted = String(this.effects.events);
     this.host.dataset.fxArmorEvents=String(this.effects.armorEvents);
     this.host.dataset.fxKind = this.effects.kind;
+    this.host.dataset.fxBatches=String(this.effects.batchCount);
+    this.host.dataset.projectilePool=String(this.sparePlayerShots.length+
+      this.spareEnemyShots.length);
     this.host.dataset.wave = String(state.currentWave);
     this.host.dataset.totalWaves = String(state.totalWaves);
     this.host.dataset.pendingWaves = String(state.pendingWaves);
@@ -363,13 +376,16 @@ export class BattlefieldRenderer {
     for (const [id, mesh] of this.projectileMeshes) {
       if (!ids.has(id)) {
         this.layers.combat.remove(mesh);
+        mesh.visible=false;
+        if(this.sparePlayerShots.length<96)this.sparePlayerShots.push(mesh);
         this.projectileMeshes.delete(id);
       }
     }
     for (const projectile of state.projectiles) {
       let mesh = this.projectileMeshes.get(projectile.id);
       if (!mesh) {
-        mesh = new THREE.Mesh(this.bulletGeometry, this.bulletMaterial);
+        mesh=this.sparePlayerShots.pop()??new THREE.Mesh(this.bulletGeometry,this.bulletMaterial);
+        mesh.visible=true;
         this.layers.combat.add(mesh);
         this.projectileMeshes.set(projectile.id, mesh);
       }
@@ -384,13 +400,17 @@ export class BattlefieldRenderer {
     for (const [id, mesh] of this.enemyProjectileMeshes) {
       if (!ids.has(id)) {
         this.layers.combat.remove(mesh);
+        mesh.visible=false;
+        if(this.spareEnemyShots.length<96)this.spareEnemyShots.push(mesh);
         this.enemyProjectileMeshes.delete(id);
       }
     }
     for (const bullet of state.enemyProjectiles) {
       let mesh = this.enemyProjectileMeshes.get(bullet.id);
       if (!mesh) {
-        mesh = new THREE.Mesh(this.bulletGeometry, this.enemyBulletMaterial);
+        mesh=this.spareEnemyShots.pop()??new THREE.Mesh(this.enemyBulletGeometry,this.enemyBulletMaterial);
+        mesh.rotation.z=Math.PI;
+        mesh.visible=true;
         this.layers.combat.add(mesh);
         this.enemyProjectileMeshes.set(bullet.id, mesh);
       }
@@ -457,8 +477,8 @@ export class BattlefieldRenderer {
         part.mesh.dispose(); // instance buffers only; shared materials/geometries disposed below
       }
     }
-    this.projectileMeshes.clear();
-    this.enemyProjectileMeshes.clear();
+    this.projectileMeshes.clear();this.sparePlayerShots.length=0;
+    this.enemyProjectileMeshes.clear();this.spareEnemyShots.length=0;
     this.effects.dispose();
     this.galaxy.dispose();
     this.planet.dispose();
