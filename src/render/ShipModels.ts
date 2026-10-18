@@ -1,238 +1,243 @@
 import * as THREE from 'three';
 import type { EnemyKind } from '../core/level.ts';
-import { P3_COLORS, P3_LIGHTING } from './P3Palette.ts';
 import { createHullLoft, createWingAirfoil } from './P4PlayerGeometry.ts';
-import { sculptRaider, sculptGuardian } from './P4EnemyGeometry.ts';
+import { P3_COLORS } from './P3Palette.ts';
 
-/** 造型素材均为原创参数化网格，单位皆位于 XY 逻辑平面，厚度只占显示用 z。 */
-export type GpuResource = THREE.BufferGeometry | THREE.Material;
+/**
+ * #101: 小镇玩具美术语言移植到实时弹幕游戏。
+ * 大形先行：胶囊船体 / 软圆短翼 / 独眼侦察员 / 双炮红甲 / 紫色厚盾。
+ * 所有部件是真实三维体积；单位的 XY 根节点及碰撞数据不变。
+ * 逐型号仅制作一份几何与材质；由渲染器 InstancedMesh 共享。
+ */
+export type GpuResource=THREE.BufferGeometry | THREE.Material;
 export interface ShipTemplates {
-  readonly player: THREE.Group;
-  readonly enemies: Readonly<Record<EnemyKind, THREE.Group>>;
+  readonly player:THREE.Group;
+  readonly enemies:Readonly<Record<EnemyKind,THREE.Group>>;
 }
-/** 在整个 WebGL 会话只构造一次所有几何与材质；各敌机使用共享引用克隆。 */
-export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
-  const track = <T extends GpuResource>(resource: T): T => { resources.push(resource); return resource; };
-  const armor = (color: number, luminous = 0.08) => track(new THREE.MeshStandardMaterial({
-    color, emissive: color, emissiveIntensity: luminous, metalness: P3_LIGHTING.armorMetalness, roughness: P3_LIGHTING.armorRoughness,
-    flatShading: true,
-  }));
-  const gleam = (color: number) => track(new THREE.MeshStandardMaterial({
-    color, emissive: color, emissiveIntensity: P3_LIGHTING.emissiveAccent, roughness: .35, metalness: .06,
-  }));
-  const scoutMetal = armor(P3_COLORS.scout, .08);
-  const scoutGlow = gleam(0xffce92);
+type Track=<T extends GpuResource>(value:T)=>T;
 
-  function hull(group: THREE.Group, points: number[], depth: number, material: THREE.Material, z = 0): void {
-    const shape = new THREE.Shape();
-    shape.moveTo(points[0], points[1]);
-    for (let i=2; i<points.length; i+=2) shape.lineTo(points[i], points[i+1]);
-    shape.closePath();
-    const geometry = track(new THREE.ExtrudeGeometry(shape, {
-      depth, bevelEnabled: true, bevelThickness: .045, bevelSize: .038,
-      bevelSegments: 1, steps: 1, curveSegments: 3,
-    }));
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.z = z;
-    group.add(mesh);
-  }
-  function box(group: THREE.Group, size: [number,number,number], position: [number,number,number],
-               mat: THREE.Material, angle = 0): void {
-    const geometry = track(new THREE.BoxGeometry(...size));
-    const mesh = new THREE.Mesh(geometry, mat);
-    mesh.position.set(...position);
-    mesh.rotation.z = angle;
-    group.add(mesh);
-  }
-  function dome(group: THREE.Group, radii: [number,number,number], position: [number,number,number],
-                mat: THREE.Material): void {
-    const mesh = new THREE.Mesh(track(new THREE.SphereGeometry(1, 12, 8)), mat);
-    mesh.scale.set(...radii);
-    mesh.position.set(...position);
-    group.add(mesh);
-  }
+function finish(track:Track,color:number,roughness=.57,metalness=.03):THREE.MeshPhysicalMaterial {
+  return track(new THREE.MeshPhysicalMaterial({
+    color,roughness,metalness,clearcoat:.22,clearcoatRoughness:.46,
+  }));
+}
+function enamel(track:Track,color:number):THREE.MeshPhysicalMaterial {
+  return track(new THREE.MeshPhysicalMaterial({
+    color,roughness:.30,metalness:.07,clearcoat:.84,clearcoatRoughness:.16,
+  }));
+}
+function shine(track:Track,color:number,emissive:number):THREE.MeshStandardMaterial {
+  return track(new THREE.MeshStandardMaterial({
+    color,roughness:.42,metalness:.02,emissive,emissiveIntensity:.52,
+  }));
+}
+function part(g:THREE.Group,track:Track,geometry:THREE.BufferGeometry,
+  mat:THREE.Material,name:string,x=0,y=0,z=0):THREE.Mesh {
+  const mesh=new THREE.Mesh(track(geometry),mat);
+  mesh.name=name;
+  mesh.position.set(x,y,z);
+  mesh.castShadow=false;mesh.receiveShadow=false;
+  g.add(mesh);
+  return mesh;
+}
+function pebble(g:THREE.Group,track:Track,mat:THREE.Material,name:string,
+  xyz:[number,number,number],radii:[number,number,number],segments=24):THREE.Mesh {
+  const mesh=part(g,track,new THREE.SphereGeometry(1,segments,16),mat,name,...xyz);
+  mesh.scale.set(...radii);
+  return mesh;
+}
+function hull(g:THREE.Group,track:Track,mat:THREE.Material,name:string,
+  stations:Parameters<typeof createHullLoft>[0],x=0):THREE.Mesh {
+  return part(g,track,createHullLoft(stations,24),mat,name,x);
+}
+function airfoil(g:THREE.Group,track:Track,mat:THREE.Material,
+  name:string,stations:Parameters<typeof createWingAirfoil>[0],side:-1|1):THREE.Mesh {
+  return part(g,track,createWingAirfoil(stations,side),mat,name);
+}
+function inset(g:THREE.Group,track:Track,mat:THREE.Material,name:string,
+  outline:number[],z:number,depth=.07):THREE.Mesh {
+  const shape=new THREE.Shape();
+  shape.moveTo(outline[0],outline[1]);
+  for(let i=2;i<outline.length;i+=2)shape.lineTo(outline[i],outline[i+1]);
+  shape.closePath();
+  return part(g,track,new THREE.ExtrudeGeometry(shape,{
+    depth,steps:1,bevelEnabled:true,bevelSize:.045,bevelThickness:.04,bevelSegments:3,
+  }),mat,name,0,0,z);
+}
+function seal(group:THREE.Group,kind:string,source:string):THREE.Group {
+  group.userData.modelKind=kind;
+  group.userData.assetSource='src/render/ShipModels.ts#'+source;
+  group.userData.geometrySource='src/render/P4PlayerGeometry.ts';
+  return group;
+}
 
-  // P4/A2: original parametric, closed airfoil surfaces, not an assembly of rectangular blocks.
-  // Wing span 2.36 (< 2.5 rule hitbox width); the engine's coordinate root remains at (0,0).
-  const player=new THREE.Group();
-  player.name='q-player-pivot';
-  const ceramic=track(new THREE.MeshPhysicalMaterial({
-    color:P3_COLORS.ceramic,roughness:.42,metalness:.06,clearcoat:.32,clearcoatRoughness:.4,
-  }));
-  const blue=track(new THREE.MeshStandardMaterial({
-    color:0x4daed1,roughness:.42,metalness:.13,side:THREE.DoubleSide,
-  }));
-  const deepBlue=track(new THREE.MeshStandardMaterial({
-    color:0x265c80,roughness:.5,metalness:.19,side:THREE.DoubleSide,
-  }));
-  const glass=track(new THREE.MeshPhysicalMaterial({
-    color:0x133a58,roughness:.28,metalness:.19,clearcoat:1,clearcoatRoughness:.1,
-    emissive:0x0b3554,emissiveIntensity:.08,
-  }));
-  const metal=track(new THREE.MeshStandardMaterial({
-    color:0x7d9bac,roughness:.35,metalness:.58,
-  }));
-  const engineLight=track(new THREE.MeshStandardMaterial({
-    color:0x8ffcf2,emissive:0x33d6d1,emissiveIntensity:.88,
-    roughness:.32,metalness:0,
-  }));
-  const place=(geometry:THREE.BufferGeometry,material:THREE.Material,
-    name:string,x=0,y=0,z=0):THREE.Mesh=>{
-    const part=new THREE.Mesh(track(geometry),material);
-    part.name=name;part.position.set(x,y,z);player.add(part);return part;
-  };
-  // One sculpted structural body forms the real nose, shoulder, belly and tapered tail.
-  place(createHullLoft([
-    {y:-.68,radiusX:.12,centerZ:.07,radiusZ:.11},
-    {y:-.46,radiusX:.28,centerZ:.11,radiusZ:.18},
-    {y:-.13,radiusX:.32,centerZ:.14,radiusZ:.24},
-    {y:.28,radiusX:.235,centerZ:.17,radiusZ:.20},
-    {y:.59,radiusX:.105,centerZ:.16,radiusZ:.10},
-    {y:.75,radiusX:.012,centerZ:.13,radiusZ:.018},
-  ],20),ceramic,'continuous-ceramic-fuselage');
-  // Wing cross sections have 6 bevel-edge vertices and top/bottom surfaces.
-  const wingStations=[
-    {x:.24,leadingY:.28,trailingY:-.42,z:.11,thickness:.17},
-    {x:.51,leadingY:.10,trailingY:-.48,z:.08,thickness:.15},
-    {x:.89,leadingY:-.16,trailingY:-.43,z:.04,thickness:.095},
-    {x:1.17,leadingY:-.29,trailingY:-.40,z:.06,thickness:.045},
+/** 玩家：类似小镇吉祥物，统一陶瓷主体、圆肩短翼和占视觉主导的座舱。 */
+function makePlayer(track:Track):THREE.Group {
+  const g=new THREE.Group();g.name='q-player-pivot';
+  const ivory=finish(track,P3_COLORS.ceramic,.48);
+  const mint=finish(track,0x76d9db,.45);
+  const teal=finish(track,0x238fa7,.51);
+  const navy=finish(track,0x263f6a,.58);
+  const visor=enamel(track,0x276c96);
+  const beam=shine(track,0xc9fff1,0x55e5d7);
+
+  // A rounded, inflated integral chassis. Its width and overall 2.4 wing span
+  // continue to sit inside the original 2.5-unit player collision silhouette.
+  hull(g,track,ivory,'continuous-ceramic-fuselage',[
+    {y:-.70,radiusX:.09,centerZ:.10,radiusZ:.08},
+    {y:-.52,radiusX:.34,centerZ:.11,radiusZ:.23},
+    {y:-.23,radiusX:.43,centerZ:.13,radiusZ:.30},
+    {y:.12,radiusX:.41,centerZ:.15,radiusZ:.32},
+    {y:.43,radiusX:.26,centerZ:.17,radiusZ:.23},
+    {y:.67,radiusX:.09,centerZ:.15,radiusZ:.10},
+    {y:.75,radiusX:.012,centerZ:.13,radiusZ:.015},
+  ]);
+  const mainWing=[
+    {x:.31,leadingY:.26,trailingY:-.46,z:.13,thickness:.23},
+    {x:.66,leadingY:.15,trailingY:-.45,z:.11,thickness:.22},
+    {x:.98,leadingY:-.10,trailingY:-.39,z:.09,thickness:.15},
+    {x:1.17,leadingY:-.21,trailingY:-.37,z:.07,thickness:.06},
   ] as const;
+  for(const side of [-1,1] as const) {
+    airfoil(g,track,ivory,side<0?'left-main-airfoil':'right-main-airfoil',mainWing,side);
+    airfoil(g,track,mint,side<0?'left-toy-wing-inlay':'right-toy-wing-inlay',[
+      {x:.47,leadingY:.16,trailingY:-.04,z:.264,thickness:.025},
+      {x:.77,leadingY:-.045,trailingY:-.23,z:.23,thickness:.022},
+      {x:1.09,leadingY:-.20,trailingY:-.31,z:.161,thickness:.014},
+    ],side);
+    pebble(g,track,mint,'wing-root-cheek',[side*.40,-.09,.38],[.22,.34,.13]);
+    hull(g,track,teal,'engine-pod',[
+      {y:-.76,radiusX:.09,centerZ:.18,radiusZ:.09},
+      {y:-.67,radiusX:.18,centerZ:.18,radiusZ:.18},
+      {y:-.38,radiusX:.21,centerZ:.18,radiusZ:.20},
+      {y:-.08,radiusX:.18,centerZ:.18,radiusZ:.17},
+      {y:.07,radiusX:.07,centerZ:.18,radiusZ:.08},
+    ],side*.64);
+    pebble(g,track,navy,'rear-nozzle-rim',[side*.64,-.735,.19],[.155,.085,.16]);
+    pebble(g,track,beam,'engine-core',[side*.64,-.79,.19],[.105,.065,.105]);
+    pebble(g,track,ivory,'engine-shoulder',[side*.64,-.14,.24],[.17,.19,.15]);
+  }
+  // Seat frame and a broad, single, reflective canopy replace tiny hard-sci-fi hardware.
+  pebble(g,track,navy,'raised-canopy-gasket',[0,.14,.43],[.345,.425,.17]);
+  pebble(g,track,visor,'single-polished-raised-canopy',[0,.16,.53],[.29,.36,.21],32);
+  pebble(g,track,mint,'canopy-catchlight',[-.10,.29,.725],[.07,.12,.027]);
+  pebble(g,track,ivory,'forehead-ceramic',[0,.59,.32],[.19,.15,.12]);
+  // A structural extruded tail, necessary for stable XY-scale silhouette.
+  inset(g,track,teal,'single-chamfered-tail-plate',
+    [-.28,-.39,-.22,-.57,0,-.61,.22,-.57,.28,-.39],-.02,.08);
+  return seal(g,'player','q-player-pivot');
+}
+
+/** Scout: oversized single eye framed by a warm cream face; a friendly one-piece flying bean. */
+function makeScout(track:Track):THREE.Group {
+  const g=new THREE.Group();g.name='scout-toy-bean';
+  const orange=finish(track,P3_COLORS.scout,.55);
+  const cream=finish(track,0xffecc6,.64);
+  const brown=finish(track,0xb9694c,.65);
+  const dark=enamel(track,0x263f56);
+  const gold=shine(track,0xffe3a9,0xffb955);
+
+  hull(g,track,orange,'scout-continuous-orange-shell',[
+    {y:-.51,radiusX:.08,centerZ:.18,radiusZ:.09},
+    {y:-.35,radiusX:.34,centerZ:.18,radiusZ:.21},
+    {y:-.10,radiusX:.43,centerZ:.20,radiusZ:.23},
+    {y:.17,radiusX:.38,centerZ:.20,radiusZ:.23},
+    {y:.39,radiusX:.22,centerZ:.18,radiusZ:.16},
+    {y:.47,radiusX:.04,centerZ:.16,radiusZ:.04},
+  ]);
   for(const side of [-1,1] as const){
-    place(createWingAirfoil(wingStations,side),ceramic,
-      side<0?'left-main-airfoil':'right-main-airfoil');
-    // One deliberate blue inset, not a scatter of decorative machine blocks.
-    place(createWingAirfoil([
-      {x:.38,leadingY:.04,trailingY:-.17,z:.205,thickness:.025},
-      {x:.78,leadingY:-.19,trailingY:-.31,z:.145,thickness:.023},
-      {x:1.10,leadingY:-.31,trailingY:-.365,z:.109,thickness:.014},
-    ],side),blue,side<0?'left-swept-inlay':'right-swept-inlay');
-    const nacelle=place(createHullLoft([
-      {y:-.70,radiusX:.085,centerZ:.105,radiusZ:.105},
-      {y:-.58,radiusX:.16,centerZ:.12,radiusZ:.14},
-      {y:-.23,radiusX:.17,centerZ:.135,radiusZ:.17},
-      {y:.035,radiusX:.09,centerZ:.16,radiusZ:.11},
-    ],14),deepBlue,'engine-pod',side*.45);
-    nacelle.userData.engineSide=side;
-    place(createHullLoft([
-      {y:-.715,radiusX:.105,centerZ:.125,radiusZ:.103},
-      {y:-.685,radiusX:.143,centerZ:.125,radiusZ:.135},
-      {y:-.638,radiusX:.13,centerZ:.125,radiusZ:.12},
-    ],14),metal,'rear-nozzle-rim',side*.45);
-    const glow=new THREE.Mesh(track(new THREE.SphereGeometry(1,16,10)),engineLight);
-    glow.name='engine-core';glow.scale.set(.105,.06,.09);
-    glow.position.set(side*.45,-.702,.13);player.add(glow);
-    const cheek=new THREE.Mesh(track(new THREE.SphereGeometry(1,12,10)),blue);
-    cheek.name='wing-root-cheek';cheek.scale.set(.16,.31,.09);
-    cheek.position.set(side*.29,-.19,.32);player.add(cheek);
+    airfoil(g,track,orange,side<0?'scout-port-airfoil':'scout-starboard-airfoil',[
+      {x:.34,leadingY:.24,trailingY:-.29,z:.15,thickness:.24},
+      {x:.61,leadingY:.24,trailingY:-.24,z:.12,thickness:.17},
+      {x:.83,leadingY:.08,trailingY:-.24,z:.09,thickness:.11},
+      {x:.99,leadingY:-.015,trailingY:-.17,z:.08,thickness:.055},
+    ],side);
+    pebble(g,track,cream,'scout-sugar-wingpad',[side*.65,.04,.235],[.23,.17,.095]);
+    pebble(g,track,brown,'scout-rear-jet-housing',[side*.42,.37,.20],[.14,.13,.16]);
+    pebble(g,track,gold,'scout-exhaust',[side*.42,.43,.24],[.075,.06,.08]);
   }
-  const canopyFrame=new THREE.Mesh(track(new THREE.SphereGeometry(1,24,14)),deepBlue);
-  canopyFrame.name='raised-canopy-gasket';
-  canopyFrame.scale.set(.23,.37,.157);canopyFrame.position.set(0,.115,.375);
-  player.add(canopyFrame);
-  const canopy=new THREE.Mesh(track(new THREE.SphereGeometry(1,28,16)),glass);
-  canopy.name='single-polished-raised-canopy';
-  canopy.scale.set(.187,.317,.166);canopy.position.set(0,.13,.431);
-  player.add(canopy);
-  // Nose ridge and rear undertray keep a clean readable three-tone hierarchy.
-  place(createHullLoft([
-    {y:.29,radiusX:.105,centerZ:.336,radiusZ:.028},
-    {y:.51,radiusX:.063,centerZ:.285,radiusZ:.034},
-    {y:.73,radiusX:.008,centerZ:.168,radiusZ:.015},
-  ],10),blue,'nose-spine');
-  place(createHullLoft([
-    {y:-.62,radiusX:.19,centerZ:-.09,radiusZ:.03},
-    {y:-.40,radiusX:.23,centerZ:-.105,radiusZ:.045},
-    {y:-.16,radiusX:.20,centerZ:-.10,radiusZ:.035},
-  ],10),deepBlue,'undertray');
-  // The single beveled extrusion is a structural tail plate, not the primary hull.
-  hull(player,[-.22,-.40,-.15,-.60,0,-.54,.15,-.60,.22,-.40],
-    .065,blue,.12);
-  player.userData.modelKind='player';
-  player.userData.assetSource='src/render/ShipModels.ts#q-player-pivot';
-  player.userData.geometrySource='src/render/P4PlayerGeometry.ts';
-  player.traverse(node=>{if(node instanceof THREE.Mesh){node.castShadow=false;node.receiveShadow=false;}});
+  // Almost half of the face is ONE eye; recognisable at 22 CSS pixels.
+  pebble(g,track,cream,'scout-creamy-eye-surround',[0,-.105,.39],[.345,.32,.155],32);
+  pebble(g,track,brown,'scout-optical-gasket',[0,-.12,.49],[.293,.275,.105]);
+  pebble(g,track,dark,'scout-main-single-optic',[0,-.13,.56],[.255,.235,.16],32);
+  pebble(g,track,gold,'scout-eye-catchlight',[-.092,-.045,.708],[.077,.07,.023]);
+  pebble(g,track,cream,'scout-upper-brow',[0,.31,.345],[.27,.115,.10]);
+  inset(g,track,cream,'scout-small-belly-keel',[-.18,-.35,0,-.53,.18,-.35],.24,.04);
+  return seal(g,'scout','scout');
+}
 
-  // P4/A3: light scout made from genuine continuous shell and slender chamfered wing solids.
-  // Optimised for a 24+ unit InstancedMesh squad: one draw per shared part, not one draw per ship.
-  const scout=new THREE.Group();
-  const scoutPale=armor(0xffdfad,.025);
-  const scoutShadow=armor(0xb96a43,.025);
-  // P4 ceramic/plastic studio shading on clean custom bevel surfaces, not faceted glow.
-  for(const material of [scoutMetal,scoutPale,scoutShadow]){
-    material.flatShading=false;
-    material.roughness=.48;
-    material.metalness=.12;
-    material.emissiveIntensity=.018;
-    material.needsUpdate=true;
-  }
-  const scoutOptic=track(new THREE.MeshPhysicalMaterial({
-    color:0x102d43,roughness:.28,metalness:.28,clearcoat:.95,clearcoatRoughness:.12,
-    emissive:0x102d43,emissiveIntensity:.06,
-  }));
-  const scoutLens=track(new THREE.MeshPhysicalMaterial({
-    color:0xffe5b5,emissive:0xffb25d,emissiveIntensity:.38,
-    roughness:.30,metalness:.08,clearcoat:.8,
-  }));
-  const addScout=(geometry:THREE.BufferGeometry,material:THREE.Material,name:string,
-    x=0,y=0,z=0):THREE.Mesh=>{
-    const mesh=new THREE.Mesh(track(geometry),material);
-    mesh.name=name;mesh.position.set(x,y,z);scout.add(mesh);return mesh;
-  };
-  addScout(createHullLoft([
-    {y:-.55,radiusX:.018,centerZ:.10,radiusZ:.018},
-    {y:-.39,radiusX:.19,centerZ:.13,radiusZ:.13},
-    {y:-.13,radiusX:.31,centerZ:.16,radiusZ:.19},
-    {y:.19,radiusX:.24,centerZ:.17,radiusZ:.18},
-    {y:.36,radiusX:.095,centerZ:.15,radiusZ:.10},
-  ],16),scoutMetal,'scout-continuous-orange-shell');
-  // Crescent-like swept wings: taper to rounded short outer wingtips, no paper-thin extrusions.
-  const wings=[
-    {x:.20,leadingY:.23,trailingY:-.31,z:.07,thickness:.15},
-    {x:.42,leadingY:.19,trailingY:-.12,z:.055,thickness:.13},
-    {x:.74,leadingY:.25,trailingY:-.21,z:.015,thickness:.075},
-    {x:.91,leadingY:.16,trailingY:-.25,z:.02,thickness:.038},
-  ] as const;
+/** Raider: twin round cherry-red crab claws and two distinct large cannons. */
+function makeRaider(track:Track):THREE.Group {
+  const g=new THREE.Group();g.name='raider-cherry-crab';
+  const coral=finish(track,P3_COLORS.raider,.55);
+  const pink=finish(track,0xffb0a0,.60);
+  const dark=finish(track,0x623f66,.60);
+  const lens=enamel(track,0x274463);
+  const energy=shine(track,0xffd2a1,0xff8c6a);
+  hull(g,track,coral,'raider-sculpted-chassis',[
+    {y:-.62,radiusX:.06,centerZ:.16,radiusZ:.08},
+    {y:-.37,radiusX:.27,centerZ:.17,radiusZ:.20},
+    {y:-.04,radiusX:.36,centerZ:.19,radiusZ:.24},
+    {y:.25,radiusX:.30,centerZ:.20,radiusZ:.23},
+    {y:.49,radiusX:.12,centerZ:.18,radiusZ:.10},
+  ]);
   for(const side of [-1,1] as const){
-    addScout(createWingAirfoil(wings,side),scoutMetal,
-      side<0?'scout-port-airfoil':'scout-starboard-airfoil');
-    addScout(createWingAirfoil([
-      {x:.39,leadingY:.143,trailingY:.005,z:.147,thickness:.020},
-      {x:.64,leadingY:.192,trailingY:-.055,z:.092,thickness:.016},
-      {x:.87,leadingY:.142,trailingY:-.187,z:.062,thickness:.009},
-    ],side),scoutPale,'scout-deliberate-wing-inlay');
-    addScout(createHullLoft([
-      {y:.11,radiusX:.060,centerZ:.10,radiusZ:.055},
-      {y:.23,radiusX:.105,centerZ:.13,radiusZ:.10},
-      {y:.39,radiusX:.07,centerZ:.13,radiusZ:.06},
-    ],10),scoutShadow,'scout-rear-thruster-pod',side*.35);
-    const thruster=new THREE.Mesh(track(new THREE.SphereGeometry(1,12,8)),scoutGlow);
-    thruster.name='scout-exhaust';thruster.scale.set(.065,.07,.065);
-    thruster.position.set(side*.35,.39,.15);scout.add(thruster);
+    airfoil(g,track,coral,side<0?'raider-left-pincer-airfoil':'raider-right-pincer-airfoil',[
+      {x:.28,leadingY:.37,trailingY:-.37,z:.16,thickness:.23},
+      {x:.57,leadingY:.43,trailingY:-.25,z:.15,thickness:.20},
+      {x:.90,leadingY:.34,trailingY:-.27,z:.12,thickness:.15},
+      {x:1.06,leadingY:.14,trailingY:-.22,z:.10,thickness:.09},
+    ],side);
+    pebble(g,track,pink,'raider-round-pincer-shoulder',[side*.61,.29,.28],[.26,.22,.13]);
+    pebble(g,track,dark,'raider-independent-weapon-pod',[side*.76,-.29,.20],[.215,.35,.205]);
+    pebble(g,track,pink,'raider-muzzle-housing',[side*.76,-.56,.22],[.16,.12,.16]);
+    pebble(g,track,energy,'raider-muzzle-emitter',[side*.76,-.625,.25],[.095,.073,.10]);
+    pebble(g,track,coral,'raider-swept-wingtip',[side*.98,.11,.20],[.10,.20,.13]);
   }
-  const frame=new THREE.Mesh(track(new THREE.SphereGeometry(1,18,12)),scoutShadow);
-  frame.name='scout-optical-gasket';frame.scale.set(.238,.233,.12);
-  frame.position.set(0,-.112,.330);scout.add(frame);
-  const eye=new THREE.Mesh(track(new THREE.SphereGeometry(1,24,14)),scoutOptic);
-  eye.name='scout-main-single-optic';eye.scale.set(.182,.179,.13);
-  eye.position.set(0,-.132,.400);scout.add(eye);
-  const specular=new THREE.Mesh(track(new THREE.SphereGeometry(1,12,8)),scoutLens);
-  specular.name='scout-eye-inner-lens';specular.scale.set(.078,.072,.038);
-  specular.position.set(-.035,-.163,.518);scout.add(specular);
-  addScout(createHullLoft([
-    {y:-.57,radiusX:.013,centerZ:.187,radiusZ:.013},
-    {y:-.42,radiusX:.068,centerZ:.231,radiusZ:.038},
-    {y:-.25,radiusX:.083,centerZ:.272,radiusZ:.036},
-  ],12),scoutPale,'scout-braced-nose');
-  scout.userData.geometrySource='src/render/P4PlayerGeometry.ts';
+  pebble(g,track,dark,'raider-canopy-recess',[0,-.07,.50],[.27,.32,.18]);
+  pebble(g,track,lens,'raider-dark-optical-canopy',[0,-.06,.61],[.224,.25,.16]);
+  pebble(g,track,pink,'raider-visor-shine',[-.075,.055,.755],[.065,.085,.025]);
+  return seal(g,'raider','raider');
+}
 
-  // P4/B1: independently sculpted claws versus fortress shield; visuals do not touch collision.
-  const raider = sculptRaider(track);
-  const guardian = sculptGuardian(track);
-
-  for (const [kind, group] of Object.entries({scout,raider,guardian})) {
-    group.userData.modelKind=kind;
-    group.userData.assetSource='src/render/ShipModels.ts#'+kind;
-    group.traverse(node => { if (node instanceof THREE.Mesh) {node.castShadow=false; node.receiveShadow=false;} });
+/** Guardian: bulky shield-like lavender marshmallow armor and an inset turquoise eye. */
+function makeGuardian(track:Track):THREE.Group {
+  const g=new THREE.Group();g.name='guardian-lavender-shield';
+  const violet=finish(track,P3_COLORS.guardian,.62);
+  const lilac=finish(track,0xe0d5ff,.61);
+  const indigo=finish(track,0x585581,.58);
+  const lens=enamel(track,0x315f89);
+  const pulse=shine(track,0xc5ffea,0x68e3dc);
+  // Deep solid three-dimensional shell: depth deliberately exceeds Raider.
+  hull(g,track,violet,'guardian-deep-monocoque',[
+    {y:-.71,radiusX:.10,centerZ:.13,radiusZ:.12},
+    {y:-.57,radiusX:.48,centerZ:.17,radiusZ:.32},
+    {y:-.25,radiusX:.76,centerZ:.20,radiusZ:.41},
+    {y:.17,radiusX:.76,centerZ:.21,radiusZ:.40},
+    {y:.54,radiusX:.45,centerZ:.19,radiusZ:.27},
+    {y:.70,radiusX:.10,centerZ:.17,radiusZ:.10},
+  ]);
+  for(const side of [-1,1] as const) {
+    pebble(g,track,violet,'guardian-big-shoulder',[side*.83,.13,.27],[.32,.50,.32]);
+    pebble(g,track,lilac,'guardian-soft-shoulder-plate',[side*.90,.20,.49],[.23,.33,.15]);
+    pebble(g,track,indigo,'guardian-shield-pylon',[side*.84,-.42,.25],[.16,.23,.20]);
+    pebble(g,track,pulse,'guardian-side-indicator',[side*.82,-.51,.43],[.085,.085,.055]);
   }
-  return { player, enemies: {scout,raider,guardian} };
+  pebble(g,track,lilac,'guardian-raised-breastplate',[0,.22,.48],[.57,.37,.19]);
+  pebble(g,track,indigo,'guardian-dark-core-recess',[0,-.13,.56],[.39,.38,.18]);
+  pebble(g,track,lilac,'guardian-core-ceramic-ring',[0,-.13,.64],[.33,.33,.13]);
+  pebble(g,track,lens,'guardian-dark-optic',[0,-.13,.73],[.27,.26,.14]);
+  pebble(g,track,pulse,'guardian-three-dimensional-energy-lens',[0,-.17,.82],[.19,.18,.10]);
+  pebble(g,track,lilac,'guardian-brow-glint',[-.10,.03,.84],[.075,.04,.018]);
+  inset(g,track,indigo,'guardian-lower-keel',[-.32,-.45,0,-.70,.32,-.45],.30,.10);
+  return seal(g,'guardian','guardian');
+}
+
+export function createShipTemplates(resources:GpuResource[]):ShipTemplates {
+  const track:Track=<T extends GpuResource>(value:T):T=>{resources.push(value);return value;};
+  const player=makePlayer(track);
+  const scout=makeScout(track);
+  const raider=makeRaider(track);
+  const guardian=makeGuardian(track);
+  return {player,enemies:{scout,raider,guardian}};
 }

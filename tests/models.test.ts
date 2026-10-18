@@ -108,3 +108,22 @@ test('P4/A3 Scout 在 24/40 架情况下共用实体翼型与镜头可见单眼'
   });
   resources.forEach(x=>x.dispose());
 });
+
+
+test('#101 商业玩具形体：大独眼、圆肩双炮、厚盾、原始 XY 边界不改',()=>{
+  const resources:Array<THREE.BufferGeometry|THREE.Material>=[];
+  const {player,enemies}=createShipTemplates(resources);
+  const mesh=(ship:THREE.Group,name:string)=>ship.children.find(m=>m.name===name) as THREE.Mesh|undefined;
+  const bound=(ship:THREE.Group)=>new THREE.Box3().setFromObject(ship).getSize(new THREE.Vector3());
+  assert.ok(mesh(player,'canopy-catchlight'),'玩家座舱具有独立可控的形体亮面');
+  assert.ok(mesh(player,'left-toy-wing-inlay')&&mesh(player,'right-toy-wing-inlay'));
+  assert.ok(mesh(enemies.scout,'scout-creamy-eye-surround'));
+  assert.ok(mesh(enemies.scout,'scout-main-single-optic'));
+  assert.ok(mesh(enemies.raider,'raider-muzzle-emitter'));
+  assert.ok(mesh(enemies.guardian,'guardian-three-dimensional-energy-lens'));
+  assert.ok(bound(enemies.guardian).z>bound(enemies.raider).z);
+  assert.ok(bound(enemies.raider).z>bound(enemies.scout).z);
+  assert.ok(bound(player).x<=2.5&&bound(enemies.scout).x<2.1);
+  assert.ok([player,...Object.values(enemies)].every(g=>g.children.every(x=>x instanceof THREE.Mesh)));
+  resources.forEach(x=>x.dispose());
+});

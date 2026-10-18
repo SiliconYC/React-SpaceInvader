@@ -41,6 +41,7 @@ export class BattlefieldRenderer {
   private readonly playerVisual: THREE.Group;
   private readonly playerMotion = new PlayerShipMotion();
   private readonly engineCores: THREE.Mesh[] = [];
+  private readonly toyFins: THREE.Mesh[] = [];
   private readonly composition = compositionFromSearch(window.location.search);
   private readonly lightVariant = p4LightVariantFromSearch(window.location.search);
   private readonly reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -164,6 +165,7 @@ export class BattlefieldRenderer {
     this.playerVisual = templates.player;
     this.playerVisual.traverse(part=>{
       if(part instanceof THREE.Mesh && part.name==='engine-core')this.engineCores.push(part);
+      if(part instanceof THREE.Mesh && part.name.endsWith('toy-wing-inlay'))this.toyFins.push(part);
     });
     this.playerMesh.add(this.playerVisual);
     this.layers.combat.add(this.playerMesh);
@@ -314,6 +316,12 @@ export class BattlefieldRenderer {
     const pose=this.playerMotion.update(state.player.position.x,state.tick,state.phase,performance.now(),this.reducedMotion);
     this.playerVisual.rotation.set(pose.pitch,pose.yaw,pose.roll);
     this.playerVisual.position.set(0,pose.offsetY,pose.offsetZ);
+    // Mechanical toy wing response: soft panels flex against acceleration
+    // without lagging the authoritative player or touching hitboxes.
+    for(const fin of this.toyFins){
+      const side=fin.name.startsWith('left')?-1:1;
+      fin.rotation.y=this.reducedMotion?0:side*(pose.roll*.64+pose.recoil*.055);
+    }
     // Only the visible twin exhaust cores change size/intensity: XY pivot and shot origin stay fixed.
     const thrust=this.reducedMotion?.30:this.playerMotion.thrust;
     for(const core of this.engineCores){
@@ -517,7 +525,7 @@ export class BattlefieldRenderer {
         for(let index=0;index<enemies.length;index++){
           this.tempMatrix.copy(positions[index]).multiply(part.localMatrix);
           const isAccent=part.name==='guardian-three-dimensional-energy-lens'||
-            part.name==='raider-muzzle-emitter'||part.name==='scout-eye-inner-lens';
+            part.name==='raider-muzzle-emitter'||part.name==='scout-eye-catchlight';
           if(isAccent){
             this.accentScale.setScalar(1+accents[index]);
             this.tempMatrix.scale(this.accentScale);

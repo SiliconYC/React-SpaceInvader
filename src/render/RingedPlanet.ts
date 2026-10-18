@@ -20,7 +20,7 @@ export class RingedPlanet {
     const geo=new THREE.SphereGeometry(1,40,28).toNonIndexed();
     const p=geo.getAttribute('position');
     const colors=new Float32Array(p.count*3);
-    const belt=[0x4a567d,0x777daa,0x9294b4,0x676a9d,0xa49aaf,0x66668e];
+    const belt=[0x8fbac8,0x86aec5,0xbcc9df,0xa9a1d6,0xdbb8d4,0x89b6c6];
     const temp=new THREE.Color();
     for(let i=0;i<p.count;i++){
       const y=p.getY(i),x=p.getX(i),z=p.getZ(i);
@@ -36,7 +36,7 @@ export class RingedPlanet {
     geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
     const bodyMaterial=new THREE.MeshStandardMaterial({
       vertexColors:true,roughness:.86,metalness:.04,
-      emissive:0x22264a,emissiveIntensity:.15,depthTest:true,depthWrite:true,
+      emissive:0x243d52,emissiveIntensity:.09,depthTest:true,depthWrite:true,
     });
     this.sphere=new THREE.Mesh(geo,bodyMaterial);
     this.sphere.name='p4-actual-banded-spherical-globe';
@@ -52,8 +52,8 @@ export class RingedPlanet {
       const phase=(radius-1.34)/.79;
       const lane=.58+.21*Math.sin(phase*40)+.12*Math.cos(phase*107);
       const split=phase>.35&&phase<.41?.34:phase>.72&&phase<.77?.43:1;
-      const col=new THREE.Color().setHSL(.64+.035*Math.sin(phase*7+angle*.4),.20,
-        (.29+.24*phase)*lane*split+.10);
+      const col=new THREE.Color().setHSL(.55+.035*Math.sin(phase*7+angle*.4),.32,
+        (.40+.22*phase)*lane*split+.14);
       col.toArray(tints,i*3);
     }
     annulus.setAttribute('color',new THREE.BufferAttribute(tints,3));
@@ -69,7 +69,7 @@ export class RingedPlanet {
 
     const fringe=new THREE.RingGeometry(2.16,2.29,96,3);
     const fringeMaterial=new THREE.MeshStandardMaterial({
-      color:0x9399c0,roughness:.94,side:THREE.DoubleSide,
+      color:0xb7d8db,roughness:.94,side:THREE.DoubleSide,
       transparent:true,opacity:.28,depthTest:true,depthWrite:false,
     });
     this.outerRing=new THREE.Mesh(fringe,fringeMaterial);

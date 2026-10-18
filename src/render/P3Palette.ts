@@ -32,11 +32,11 @@ export const P3_LIGHTING = Object.freeze({
 
 export function installP3Lighting(scene:THREE.Scene,variant:P4LightVariant='studio'):readonly THREE.Light[] {
   const studio=variant==='studio';
-  const fill=new THREE.AmbientLight(0xa9bdd2,studio?P3_LIGHTING.ambient:.33);
-  const sky=new THREE.HemisphereLight(0xd9ebfa,0x151e3d,studio?P3_LIGHTING.hemisphere:.77);
-  const key=new THREE.DirectionalLight(0xffeddd,studio?P3_LIGHTING.key:1.8);
+  const fill=new THREE.AmbientLight(0xc3d4e5,studio?P3_LIGHTING.ambient:.33);
+  const sky=new THREE.HemisphereLight(0xf0ffef,0x28345e,studio?P3_LIGHTING.hemisphere:.77);
+  const key=new THREE.DirectionalLight(0xffedcd,studio?P3_LIGHTING.key:1.8);
   key.position.set(-9,13,16);
-  const rim=new THREE.DirectionalLight(0x8ba8e5,studio?P3_LIGHTING.rim:.44);
+  const rim=new THREE.DirectionalLight(0x95efff,studio?P3_LIGHTING.rim:.44);
   rim.position.set(9,-6,9);
   for(const light of [fill,sky,key,rim])scene.add(light);
   return [fill,sky,key,rim];
