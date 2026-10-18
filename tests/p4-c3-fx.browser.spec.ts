@@ -61,12 +61,22 @@ test('P4/C3：密集真实战斗 15+ 事件维持上限，暂停／移动端清�
   await writeFile(info.outputPath('p4-c3-dense-metrics.json'),JSON.stringify({
     renderer:'real Chromium WebGL; software driver, not hardware phone',metrics,
   },null,2));
+  // Pause while the action button is stable at desktop size. Under SwiftShader,
+  // large WebGL screenshots and consecutive viewport rotations can delay React
+  // layout updates; clicking the moving mobile control here causes a false flaky
+  // timeout unrelated to FX resources. Mobile clickability has its own D1 tests.
+  const running=await stage.getAttribute('data-game-phase')==='running';
+  if(running){
+    await page.getByRole('button',{name:'暂停',exact:true}).click();
+    await expect(stage).toHaveAttribute('data-game-phase','paused');
+    await expect(stage).toHaveAttribute('data-fx-active','0');
+  }
   await page.setViewportSize({width:844,height:390});
   await page.screenshot({path:info.outputPath('p4-c3-mobile-landscape.png')});
   await page.setViewportSize({width:390,height:844});
   await page.screenshot({path:info.outputPath('p4-c3-mobile-portrait.png')});
-  if(await stage.getAttribute('data-game-phase')==='running'){
-    await page.getByRole('button',{name:'暂停'}).click();
+  if(running){
+    await expect(stage).toHaveAttribute('data-game-phase','paused');
     await expect(stage).toHaveAttribute('data-fx-active','0');
   }
 });
