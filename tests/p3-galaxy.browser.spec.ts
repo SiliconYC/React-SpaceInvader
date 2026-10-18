@@ -3,7 +3,8 @@ import { test,expect } from '@playwright/test';
 test('P3/C1: WebP 真正通过同源网络下载、在 Three.js GPU 中加载、宽屏竖屏无扭曲',async({page},info)=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   const response=page.waitForResponse(r=>r.url().endsWith('/art/backgrounds/galaxy-p4-veil.webp'));
-  await page.goto('./');
+  // Exercise the stable P3 veil comparison asset; first-contact now selects its own theme image.
+  await page.goto('./?galaxy=veil');
   const download=await response;
   expect(download.ok()).toBe(true);
   expect(download.headers()['content-type']).toMatch(/image\/webp|application\/octet-stream/);
@@ -28,7 +29,7 @@ test('P3/C1: WebP 真正通过同源网络下载、在 Three.js GPU 中加载、
 });
 test('P3/C1: 对真实 WebP 请求注入 404 后背景纯色兜底，玩家控制照常工作',async({page})=>{
   await page.route('**/art/backgrounds/galaxy-p4-veil.webp',route=>route.fulfill({status:404,body:'missing'}));
-  await page.goto('./');
+  await page.goto('./?galaxy=veil');
   const stage=page.getByTestId('battlefield');
   await expect(stage).toHaveAttribute('data-galaxy','fallback');
   await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
