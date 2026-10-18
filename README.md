@@ -47,6 +47,7 @@
 - [AGENTS.md](AGENTS.md)：AI 开发规则、2.5D 硬约束、独立分支与 PR、CI 精简和验收。
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)：二维逻辑与三维渲染隔离、数据驱动关卡、测试及发布。
 - [docs/ROADMAP.md](docs/ROADMAP.md)：P1 七项 Issue、依赖顺序、最小完整可玩闭环。
+- [2026-10-18 美术重审与优化方案](docs/ART_REDESIGN_REACTMONO_2026-10-18.md)：参考 ReactMono 小镇，分析现有 P4 画面，提出模型、背景、动作和过场返工方案；仅设计，尚未实施或获审美批准。
 
 每个 Issue 从 `dev` 建立独立短期分支，细粒度 Commit/Push，独立 PR 合并后部署 GitHub Pages，再验收增量。
 
