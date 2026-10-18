@@ -228,9 +228,6 @@ export class BattlefieldRenderer {
     this.observer.observe(this.host);
     this.resize();
     this.render(snapshot);
-    // The initial WebGL context is already usable; do not depend on a restore event
-    // that browsers are only required to dispatch after a context loss.
-    if(!this.contextLost)this.onContext?.(false);
   }
 
   setDebugVisible(enabled: boolean): void {

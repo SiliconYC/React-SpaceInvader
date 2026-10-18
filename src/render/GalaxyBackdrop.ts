@@ -27,13 +27,11 @@ export class GalaxyBackdrop {
     this.mesh.frustumCulled = false;
     parent.add(this.mesh);
     host.dataset.galaxy = 'loading';
-    // Reproducible real-game comparison: ?galaxy=veil|arc|legacy; absent query uses the level theme.
+    // Reproducible real-game comparison: ?galaxy=veil|arc|legacy; no external runtime requests.
     const choice=new URLSearchParams(window.location.search).get('galaxy');
     const selected=choice==='arc' ? GalaxyBackdrop.alternatePath :
-      choice==='legacy' ? GalaxyBackdrop.legacyPath :
-      choice==='veil' ? GalaxyBackdrop.path : this.curatedPath;
-    host.dataset.galaxyVariant=choice==='arc'?'arc':choice==='legacy'?'legacy':
-      choice==='veil'?'veil':'theme';
+      choice==='legacy' ? GalaxyBackdrop.legacyPath : this.curatedPath;
+    host.dataset.galaxyVariant=choice==='arc'?'arc':choice==='legacy'?'legacy':'veil';
     host.dataset.galaxyUrl = import.meta.env.BASE_URL + selected;
     new THREE.TextureLoader().load(
       host.dataset.galaxyUrl,

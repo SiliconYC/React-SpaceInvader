@@ -13,7 +13,7 @@ test.describe('模拟真实移动设备触控',()=>{
     });
     const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
     await page.goto('./');
-    await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常',{timeout:12000});
+    await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
     const stage=page.getByTestId('battlefield');
     await expect(page.getByTestId('touch-left')).toBeVisible();
     await expect(page.getByTestId('touch-fire')).toBeVisible();
