@@ -1,0 +1,7 @@
+{
+  "generator": "scripts/bake-studio-environment.mjs",
+  "width": 768,
+  "height": 1024,
+  "range": 64,
+  "maximum": 56.3125
+}

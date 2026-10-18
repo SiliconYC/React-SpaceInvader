@@ -6,3 +6,6 @@ dist/
 .env
 .env.*
 !.env.example
+artifacts/
+test-results/
+playwright-report/
