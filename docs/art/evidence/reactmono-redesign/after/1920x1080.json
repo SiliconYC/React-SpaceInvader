@@ -1,0 +1,16 @@
+{
+  "width": 1920,
+  "height": 1080,
+  "context": "software Chromium / SwiftShader",
+  "webglContext": "ready",
+  "galaxy": "loaded",
+  "galaxyUrl": "/React-SpaceInvader/art/backgrounds/galaxy-reactmono-veil.webp",
+  "theme": "nebula-blue",
+  "enemyCount": "24",
+  "drawCalls": "48",
+  "spanX": "47.644",
+  "spanY": "26.800",
+  "playerX": "965.897",
+  "playerY": "930.263",
+  "controls": []
+}
