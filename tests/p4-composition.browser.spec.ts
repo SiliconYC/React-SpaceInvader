@@ -21,6 +21,12 @@ test('P4/A1 stage 与 breathing：桌面/手机真 WebGL 构图与屏幕投影',
       await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
       await expect(battle).toHaveAttribute('data-composition',variant);
       await expect(battle).toHaveAttribute('data-enemy-count','24');
+      if(view.width===1920&&variant==='stage'){
+        await expect(battle).toHaveAttribute('data-galaxy','loaded');
+        await expect(battle).toHaveAttribute('data-galaxy-url',
+          '/React-SpaceInvader/art/backgrounds/galaxy-reactmono-veil.webp');
+        await expect(battle).toHaveAttribute('data-galaxy-variant','theme');
+      }
       const canvas=await battle.locator('canvas').boundingBox();
       expect(canvas?.width).toBeGreaterThanOrEqual(view.width-2);
       expect(canvas?.height).toBeGreaterThanOrEqual(view.height-2);

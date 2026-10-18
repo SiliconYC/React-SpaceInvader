@@ -84,8 +84,8 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   // One sculpted structural body forms the real nose, shoulder, belly and tapered tail.
   place(createHullLoft([
     {y:-.68,radiusX:.12,centerZ:.07,radiusZ:.11},
-    {y:-.46,radiusX:.28,centerZ:.11,radiusZ:.18},
-    {y:-.13,radiusX:.32,centerZ:.14,radiusZ:.24},
+    {y:-.46,radiusX:.35,centerZ:.12,radiusZ:.19},
+    {y:-.13,radiusX:.38,centerZ:.15,radiusZ:.265},
     {y:.28,radiusX:.235,centerZ:.17,radiusZ:.20},
     {y:.59,radiusX:.105,centerZ:.16,radiusZ:.10},
     {y:.75,radiusX:.012,centerZ:.13,radiusZ:.018},
@@ -127,11 +127,11 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
   }
   const canopyFrame=new THREE.Mesh(track(new THREE.SphereGeometry(1,24,14)),deepBlue);
   canopyFrame.name='raised-canopy-gasket';
-  canopyFrame.scale.set(.23,.37,.157);canopyFrame.position.set(0,.115,.375);
+  canopyFrame.scale.set(.27,.405,.18);canopyFrame.position.set(0,.115,.392);
   player.add(canopyFrame);
   const canopy=new THREE.Mesh(track(new THREE.SphereGeometry(1,28,16)),glass);
   canopy.name='single-polished-raised-canopy';
-  canopy.scale.set(.187,.317,.166);canopy.position.set(0,.13,.431);
+  canopy.scale.set(.225,.35,.195);canopy.position.set(0,.13,.461);
   player.add(canopy);
   // Nose ridge and rear undertray keep a clean readable three-tone hierarchy.
   place(createHullLoft([
@@ -209,15 +209,18 @@ export function createShipTemplates(resources: GpuResource[]): ShipTemplates {
     thruster.name='scout-exhaust';thruster.scale.set(.065,.07,.065);
     thruster.position.set(side*.35,.39,.15);scout.add(thruster);
   }
-  const frame=new THREE.Mesh(track(new THREE.SphereGeometry(1,18,12)),scoutShadow);
-  frame.name='scout-optical-gasket';frame.scale.set(.238,.233,.12);
-  frame.position.set(0,-.112,.330);scout.add(frame);
+  const bezel=new THREE.Mesh(track(new THREE.SphereGeometry(1,22,14)),scoutPale);
+  bezel.name='scout-ocular-ceramic-rim';bezel.scale.set(.294,.285,.08);
+  bezel.position.set(0,-.11,.305);scout.add(bezel);
+  const frame=new THREE.Mesh(track(new THREE.SphereGeometry(1,20,14)),scoutShadow);
+  frame.name='scout-optical-gasket';frame.scale.set(.257,.248,.085);
+  frame.position.set(0,-.118,.37);scout.add(frame);
   const eye=new THREE.Mesh(track(new THREE.SphereGeometry(1,24,14)),scoutOptic);
-  eye.name='scout-main-single-optic';eye.scale.set(.182,.179,.13);
-  eye.position.set(0,-.132,.400);scout.add(eye);
+  eye.name='scout-main-single-optic';eye.scale.set(.224,.214,.09);
+  eye.position.set(0,-.132,.404);scout.add(eye);
   const specular=new THREE.Mesh(track(new THREE.SphereGeometry(1,12,8)),scoutLens);
-  specular.name='scout-eye-inner-lens';specular.scale.set(.078,.072,.038);
-  specular.position.set(-.035,-.163,.518);scout.add(specular);
+  specular.name='scout-eye-inner-lens';specular.scale.set(.089,.079,.025);
+  specular.position.set(-.042,-.163,.49);scout.add(specular);
   addScout(createHullLoft([
     {y:-.57,radiusX:.013,centerZ:.187,radiusZ:.013},
     {y:-.42,radiusX:.068,centerZ:.231,radiusZ:.038},
