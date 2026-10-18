@@ -89,10 +89,12 @@ export class RingedPlanet {
   }
   resize(layout:CombatProjection,width:number,height:number):void{
     const portrait=width/height<.9;
+    const narrowLandscape=width<1000&&height<500&&width/height>1.1;
     const radius=Math.min(portrait?1.16:1.50,layout.spanY*(portrait?.030:.058));
     this.group.scale.setScalar(radius);
     // Entire planet (including rings) stays outside the principal shooting corridor.
-    this.group.position.set(layout.spanX*.39,layout.centerY+layout.spanY*.23,-18);
+    const edgeX=narrowLandscape?-layout.spanX*.33:layout.spanX*.39;
+    this.group.position.set(edgeX,layout.centerY+layout.spanY*.23,-18);
   }
   update(tick:number,reducedMotion=false):void{
     this.sphere.rotation.y=reducedMotion?0:tick*.0003;

@@ -39,6 +39,12 @@ test('P3 玩家模型为多层可编辑 Three.js 实体，尺寸与 XY 命中盒
   assert.ok(bounds.max.x-bounds.min.x>=2.1);
   assert.ok(body.some(mesh=>mesh.geometry instanceof THREE.SphereGeometry),'真实圆润体积，不是平面贴图');
   assert.ok(body.some(mesh=>mesh.geometry instanceof THREE.ExtrudeGeometry),'机翼有真实厚度');
+  const fuselage=body.find(mesh=>mesh.name==='continuous-ceramic-fuselage');
+  const canopy=body.find(mesh=>mesh.name==='single-polished-raised-canopy');
+  assert.ok(fuselage&&new THREE.Box3().setFromObject(fuselage).getSize(new THREE.Vector3()).x>=.72,
+    '玩家中央机身必须在正常战斗尺寸形成饱满肩部');
+  assert.ok(canopy&&canopy.scale.x>=.22&&canopy.scale.z>=.18,
+    '驾驶舱应作为凸起主视觉部件清晰可辨');
   assert.ok(body.every(mesh=>(mesh.material as THREE.MeshStandardMaterial).map==null),'不依赖贴图');
   const before=player.position.clone();
   player.rotation.set(.2,-.2,.2);
@@ -98,6 +104,10 @@ test('P4/A3 Scout 在 24/40 架情况下共用实体翼型与镜头可见单眼'
   const wing=(scout.children as THREE.Mesh[]).filter(x=>x.name.endsWith('airfoil'));
   assert.equal(wing.length,2);
   assert.ok(wing.every(x=>x.geometry.type==='BufferGeometry'));
+  const eye=(scout.children as THREE.Mesh[]).find(x=>x.name==='scout-main-single-optic') as THREE.Mesh|undefined;
+  const bezel=(scout.children as THREE.Mesh[]).find(x=>x.name==='scout-ocular-ceramic-rim') as THREE.Mesh|undefined;
+  assert.ok(eye&&eye.scale.x>=.21&&eye.scale.y>=.20,'独眼必须在常规编队尺寸仍然成为主识别点');
+  assert.ok(bezel,'独眼应有清楚的浅色凹座边缘');
   assert.ok((scout.children as THREE.Mesh[]).some(x=>x.name==='scout-main-single-optic'));
   const dims=new THREE.Box3().setFromObject(scout).getSize(new THREE.Vector3());
   assert.ok(dims.x>1.7&&dims.x<2.1);

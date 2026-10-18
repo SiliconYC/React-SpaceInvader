@@ -6,7 +6,7 @@ export const VISUAL_THEMES = Object.freeze({
     id:'nebula-blue',sky:0x07152b,galaxyTint:0xffffff,
     planetTint:0xffffff,asteroidTint:0xffffff,foregroundTint:0xffffff,
     rimTint:0x94b7ed,
-    background:'art/backgrounds/galaxy-p4-veil.webp',
+    background:'art/backgrounds/galaxy-reactmono-veil.webp',
   }),
   'violet-drift':Object.freeze({
     id:'violet-drift',sky:0x130e30,galaxyTint:0xd0b8f2,

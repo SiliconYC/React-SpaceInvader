@@ -37,3 +37,12 @@ test('球体尺寸随视口减小，绕转仅更改姿态不修改 XY 规则数�
   assert.ok(p.group.position.z<0);
   p.dispose();
 });
+test('窄幅横屏把行星移出右上角暂停/重置控件区域',()=>{
+  const g=new THREE.Group(),p=new RingedPlanet(g),world={width:36,height:24};
+  p.resize(combatProjection(world,1920,1080,false),1920,1080);
+  const desktopX=p.group.position.x;
+  p.resize(combatProjection(world,844,390,true),844,390);
+  assert.ok(desktopX>0,'宽屏桌面仍将行星安排在右侧');
+  assert.ok(p.group.position.x<0,'窄横屏将行星移到左上装饰区，避免压住右上角操作键');
+  p.dispose();
+});
