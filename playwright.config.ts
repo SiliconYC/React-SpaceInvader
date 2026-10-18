@@ -7,6 +7,8 @@ export default defineConfig({
   // Full-resolution Chromium WebGL screenshots can take >30s on CI SwiftShader.
   timeout: process.env.CI ? 90_000 : 30_000,
   retries: process.env.CI ? 1 : 0,
+  // A shared CPU rasterizer cannot run several GPU-heavy canvases efficiently.
+  workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
     baseURL,

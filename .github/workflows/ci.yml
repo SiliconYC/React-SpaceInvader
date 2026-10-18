@@ -29,6 +29,7 @@ jobs:
           path: |
             test-results/**/p3-*.png
             test-results/**/p4-*.png
+            test-results/**/toy-*.png
             test-results/**/101-*.png
             test-results/**/desktop-baseline.png
             test-results/**/narrow-baseline.png

@@ -31,8 +31,17 @@
 
 - 四机型已重雕；固定局部倾角只施加在网格上，逻辑 pivot 仍为 z=0。源文件为 `ShipModels.ts`，没有更改 `src/core/`、输入或关卡数据。
 - 新 `ShipBatches.ts` 按共享材质合并刚性部件，保留发动机芯、翼片和眼/能量核等可动 pivot。测试以精确世界顶点包围盒核对合批前后，而不是用旋转局部 AABB 的保守值误判。
-- Blender 5.2.2 离线每顶点 48 条余弦半球射线、0.48 世界单位范围烘焙接触遮蔽；输出 `ShipOcclusion.ts` 共 68,692 B。生成：`node --experimental-strip-types scripts/export-ship-occlusion.mjs /tmp/ships-for-ao.json`，然后 `blender -b --python scripts/bake-ship-occlusion.py -- /tmp/ships-for-ao.json src/render/ShipOcclusion.ts`。SHA256 回归防止模型改动后误用旧遮蔽。
+- Blender 5.2.2 离线每顶点 48 条余弦半球射线、0.48 世界单位范围烘焙接触遮蔽；输出 `ShipOcclusion.ts` 共 67,628 B。生成：`node --experimental-strip-types scripts/export-ship-occlusion.mjs /tmp/ships-for-ao.json`，然后 `blender -b --python scripts/bake-ship-occlusion.py -- /tmp/ships-for-ao.json src/render/ShipOcclusion.ts`。SHA256 回归防止模型改动后误用旧遮蔽。
 - 首版运行时 PMREM + 实时阴影在软件 Chromium 初始化约 9～12 秒，触发原有 5 秒 readiness 断言；没有放宽测试。改为离线 `studio-cubeuv.png`，CPU image 可在上下文恢复时重新上传。程序源/元数据/MIT 许可同步入库。默认以几何 AO 提供接缝层次；`?shadow=live` 保留实时自阴影对照，生产默认不增加阴影通道。
-- 主体塑料使用 Standard 材质，Physical 只给玻璃舱盖/眼；背景降低雾亮度并移除弧线和十字星。首屏操作说明移到左上，避免压住玩家。
+- 主体塑料与镜片统一使用 Standard PBR，靠 roughness/metalness/反射强度区分表面；背景降低雾亮度并移除弧线和十字星。首屏操作说明移到左上，避免压住玩家。
 - 独立审查发现首版 GPU-only PMREM 恢复后丢失反射的 P2；上述离线 CPU 图片实现已修复，复审没有剩余重大/中等缺陷。
 - `npm run verify`：90/90 单测通过，类型/构建/Pages 子路径/难度测量/资产审计通过。针对暂停与上下文恢复浏览器两项通过。最初 11 项浏览器失败全部在 WebGL 初始化等待，不是战斗规则改变；优化后完整套件重跑中。
+- 最终将镜片也统一为 Standard PBR，消除额外 Physical 着色器变体；此前全量本地旧材质运行 55 项通过、2 项首屏初始化超时后主动终止过时运行。最终针对这两项、反射恢复像素一致性、资源失败兜底、D2 三种镜头状态、构图和灯光多视口、边界输入重跑 **10/10 通过（2.4 分钟）**。
+- CI 软件 GPU 浏览器改为串行；边界验收改为等到实际 x>31 再释放按键，保留原位置断言，没有通过放宽规则/判定或 WebGL readiness 超时消除失败。
+- 行星保留三维球体与真实倾斜环，改为宽淡彩条带和低模受光面，移除密集天气噪点与高频环纹，继续避开主弹道。
+
+## 已入库证据
+
+[完整前后实图、真实桌面与软件 GPU 数据、两版连续录屏](art/rebuild-101-20261019/README.md)。四种视口固定种子/逻辑 tick=15，所有规则字段核对一致；近景和正常战斗分列。Apple M1/Metal 短时 24 敌机测量约60 FPS，手机未验。软件光栅单次采样退步也原样登记。
+
+当前进入最终独立 PR 检查；合并与线上结果另见 PR/Pages 工作流，不提前声明通过。

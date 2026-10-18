@@ -16,9 +16,9 @@ function plastic(track:Track,color:number,roughness=.48):THREE.MeshStandardMater
   return track(new THREE.MeshStandardMaterial({color,roughness,metalness:.02,
     vertexColors:true,envMapIntensity:.55}));
 }
-function glass(track:Track,color:number):THREE.MeshPhysicalMaterial {
-  return track(new THREE.MeshPhysicalMaterial({color,roughness:.28,metalness:.12,
-    vertexColors:true,clearcoat:1,clearcoatRoughness:.12,envMapIntensity:1.2}));
+function glass(track:Track,color:number):THREE.MeshStandardMaterial {
+  return track(new THREE.MeshStandardMaterial({color,roughness:.28,metalness:.22,
+    vertexColors:true,envMapIntensity:1.2}));
 }
 function luminous(track:Track,color:number):THREE.MeshStandardMaterial {
   return track(new THREE.MeshStandardMaterial({color,roughness:.38,
@@ -169,10 +169,12 @@ function makeRaider(track:Track):THREE.Group {
     egg(g,track,coral,'raider-round-pincer-shoulder',[side*.72,.17,.16],[.29,.34,.31]);
     egg(g,track,cream,'raider-shoulder-inlay',[side*.73,.25,.437],[.16,.13,.035]);
     egg(g,track,dark,'raider-independent-weapon-pod',[side*.74,-.28,.18],[.22,.35,.23]);
-    egg(g,track,coral,'raider-muzzle-housing',[side*.74,-.44,.25],[.215,.15,.215]);
-    bell(g,track,cream,'raider-open-cannon-lip',[side*.74,-.51,.30],.15);
-    egg(g,track,visor,'raider-cannon-bore',[side*.74,-.535,.32],[.112,.095,.102]);
-    egg(g,track,hot,'raider-muzzle-emitter',[side*.74,-.58,.34],[.057,.04,.05]);
+    egg(g,track,coral,'raider-muzzle-housing',[side*.74,-.40,.25],[.215,.15,.215]);
+    const lip=bell(g,track,cream,'raider-open-cannon-lip',[side*.74,-.45,.475],.15);
+    lip.rotation.x=.25;
+    const bore=mesh(g,track,new THREE.CircleGeometry(.108,24),visor,'raider-cannon-bore',[side*.74,-.445,.458]);
+    bore.rotation.x=.25;
+    egg(g,track,hot,'raider-muzzle-emitter',[side*.74,-.446,.465],[.045,.035,.04]);
   }
   egg(g,track,dark,'raider-canopy-recess',[0,.10,.40],[.29,.25,.19]);
   egg(g,track,visor,'raider-dark-optical-canopy',[0,.08,.52],[.245,.20,.17]);

@@ -20,7 +20,7 @@ async function capture(name,viewport,query='',touch=false){
   // Baseline has no studio map; latest must finish the actual image load.
   await page.waitForFunction(()=>{const d=document.querySelector('[data-testid="battlefield"]')?.dataset;return !d?.studioEnvironment||d.studioEnvironment==='loaded';});
   await page.clock.runFor(100);
-  if(!query){await page.getByRole('button',{name:'开始',exact:true}).click({force:true});await page.clock.runFor(1000);}
+  if(!query){await page.getByRole('button',{name:'开始',exact:true}).click({force:true});await page.clock.runFor(17);await page.clock.fastForward(1000);}
   const stage=await page.getByTestId('battlefield').evaluate(el=>({...el.dataset}));
   // CDP captures the last real frame without advancing the deliberately frozen
   // requestAnimationFrame clock merely to satisfy screenshot style settling.
@@ -35,5 +35,5 @@ try{
     await capture('battle-'+viewport.width+'x'+viewport.height,viewport,'',viewport.width<1000);
   }
   for(const kind of ['player','scout','raider','guardian'])await capture('closeup-'+kind,{width:1440,height:900},'?shipPreview='+kind+'&shipAngle=tilt');
-  writeFileSync(out+'/capture.json',JSON.stringify({base,browser:browser.version(),gpu:'Chromium SwiftShader; not physical phone GPU',clock:'ready 100 ms + running 1000 ms; first RAF has no rule delta',measurements},null,2)+'\n');
+  writeFileSync(out+'/capture.json',JSON.stringify({base,browser:browser.version(),gpu:'Chromium SwiftShader; not physical phone GPU',clock:'ready 100 ms, running 17 ms, fastForward 1000 ms; one capped 0.25 s engine advance; see stage foregroundMotion for exact tick',measurements},null,2)+'\n');
 }finally{await browser.close();}

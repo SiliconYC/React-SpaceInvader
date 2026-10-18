@@ -12,7 +12,9 @@ test('P3/A2: 分层稳定，不渲染工程背板；触边射击与横竖屏回�
   await page.screenshot({path:info.outputPath('p3-layer-desktop.png'),fullPage:true});
   await page.getByRole('button',{name:'开始',exact:true}).click();
   await page.keyboard.down('ArrowRight');
-  await page.waitForTimeout(2200);
+  // Hold until the actual boundary position, rather than assuming a wall-clock
+  // duration on a software GPU (the game deliberately caps catch-up per frame).
+  await expect.poll(async()=>Number(await stage.getAttribute('data-player-x')),{timeout:10000}).toBeGreaterThan(31);
   await page.keyboard.up('ArrowRight');
   expect(Number(await stage.getAttribute('data-player-x'))).toBeGreaterThan(31);
   await page.keyboard.down('Space');

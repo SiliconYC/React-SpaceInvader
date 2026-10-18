@@ -6,6 +6,7 @@
  */
 import {chromium} from '@playwright/test';
 import {writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 const browser=await chromium.launch({args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 try{
   const page=await browser.newPage();
@@ -29,8 +30,9 @@ try{
     target.dispose();generator.dispose();room.dispose();renderer.dispose();
     return {png,width,height,range,maximum};
   });
-  writeFileSync('public/art/studio-cubeuv.png',Buffer.from(result.png,'base64'));
+  const bytes=Buffer.from(result.png,'base64');
+  writeFileSync('public/art/studio-cubeuv.png',bytes);
   const {png,...metadata}=result;
-  writeFileSync('docs/art/studio-cubeuv.json',JSON.stringify({generator:'scripts/bake-studio-environment.mjs',...metadata},null,2)+'\n');
+  writeFileSync('docs/art/studio-cubeuv.json',JSON.stringify({generator:'scripts/bake-studio-environment.mjs',...metadata,sha256:createHash('sha256').update(bytes).digest('hex')},null,2)+'\n');
   console.log(metadata);
 }finally{await browser.close();}

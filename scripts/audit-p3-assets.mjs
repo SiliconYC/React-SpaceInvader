@@ -1,6 +1,7 @@
 import {readFileSync,statSync,mkdirSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 
 const root=process.cwd();
 const check=(path,predicate,label)=>{
@@ -15,6 +16,13 @@ const existsText=(path,required)=>{
 };
 const png=check('public/art/backgrounds/galaxy-v2-source.png',bytes=>
   bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),'real PNG signature');
+const studio=check('public/art/studio-cubeuv.png',bytes=>
+  bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])) &&
+  bytes.readUInt32BE(16)===768 && bytes.readUInt32BE(20)===1024,'pre-filtered CubeUV PNG dimensions');
+const studioMetadata=JSON.parse(readFileSync(resolve(root,'docs/art/studio-cubeuv.json'),'utf8'));
+assert.equal(studioMetadata.range,64,'runtime intensity assumes range64');
+assert.equal(studioMetadata.sha256,createHash('sha256').update(readFileSync(resolve(root,studio.path))).digest('hex'),'studio source/output manifest matches real PNG');
+assert.ok(studio.bytes<200*1024,'offline lighting atlas under 200 KiB');
 const webp=check('public/art/backgrounds/galaxy-v2.webp',bytes=>
   bytes.toString('ascii',0,4)==='RIFF' && bytes.toString('ascii',8,12)==='WEBP','real WebP signature');
 assert.ok(webp.bytes<300*1024,'runtime starfield should remain below 300 KiB');
@@ -40,7 +48,7 @@ const levels=['first-contact','crossfire'].map(id=>{
 });
 const report={
   audit:'P3 original editable reference, actual on-disk art and live Three.js source',
-  sourceImage:png,runtimeImage:webp,reference,
+  sourceImage:png,runtimeImage:webp,studioEnvironment:studio,reference,
   editableThreeSources:geometry,levels,
   constraints:{runtimeBytesUnder300KiB:true,modelsAreNotScreenshots:true,
     actualWebGLProof:'tests/p3-final.browser.spec.ts and Pages CI artifacts',
@@ -50,4 +58,4 @@ const report={
 mkdirSync(resolve(root,'artifacts'),{recursive:true});
 writeFileSync(resolve(root,'artifacts/p3-asset-audit.json'),JSON.stringify(report,null,2));
 console.log('P3 asset/source audit:',JSON.stringify({png:png.bytes,webp:webp.bytes,
-  reference:reference.bytes,sources:geometry.length,levels}));
+  studio:studio.bytes,reference:reference.bytes,sources:geometry.length,levels}));
