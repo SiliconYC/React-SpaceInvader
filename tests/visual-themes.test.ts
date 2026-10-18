@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync,statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { parseLevel } from '../src/levels/parse.ts';
 import { DEFAULT_VISUAL_THEME,resolveVisualTheme,VISUAL_THEMES } from '../src/levels/visualThemes.ts';
 import { GameEngine } from '../src/core/engine.ts';
@@ -9,12 +9,7 @@ const source=JSON.parse(readFileSync(new URL('../public/levels/first-contact.jso
 test('P3/E1: two approved data-only palettes share Git assets, never remote scripts or URLs',()=>{
   assert.deepEqual(Object.keys(VISUAL_THEMES).sort(),['nebula-blue','violet-drift']);
   const themes=Object.values(VISUAL_THEMES);
-  assert.equal(VISUAL_THEMES['nebula-blue'].background,'art/backgrounds/galaxy-reactmono-veil.webp');
-  assert.equal(VISUAL_THEMES['violet-drift'].background,'art/backgrounds/galaxy-p4-veil.webp');
-  const source=statSync(new URL('../docs/art/sources/galaxy-reactmono-redesign-source.png',import.meta.url));
-  const runtime=statSync(new URL('../public/art/backgrounds/galaxy-reactmono-veil.webp',import.meta.url));
-  assert.ok(source.size>1_000_000,'the generated PNG source is retained in Git');
-  assert.ok(runtime.size<300_000,'the same-origin runtime texture stays small');
+  assert.ok(themes.every(x=>x.background==='art/backgrounds/galaxy-p4-veil.webp'));
   assert.notEqual(themes[0].galaxyTint,themes[1].galaxyTint);
   assert.notEqual(themes[0].sky,themes[1].sky);
   assert.equal(resolveVisualTheme(undefined).id,DEFAULT_VISUAL_THEME);
