@@ -9,7 +9,7 @@ const source=JSON.parse(readFileSync(new URL('../public/levels/first-contact.jso
 test('P3/E1: two approved data-only palettes share Git assets, never remote scripts or URLs',()=>{
   assert.deepEqual(Object.keys(VISUAL_THEMES).sort(),['nebula-blue','violet-drift']);
   const themes=Object.values(VISUAL_THEMES);
-  assert.ok(themes.every(x=>x.background==='art/backgrounds/galaxy-p4-veil.webp'));
+  assert.ok(themes.every(x=>x.background==='art/backgrounds/toy-orbit.svg'));
   assert.notEqual(themes[0].galaxyTint,themes[1].galaxyTint);
   assert.notEqual(themes[0].sky,themes[1].sky);
   assert.equal(resolveVisualTheme(undefined).id,DEFAULT_VISUAL_THEME);

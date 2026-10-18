@@ -194,9 +194,9 @@ function makeRaider(track:Track):THREE.Group {
     pebble(g,track,energy,'raider-muzzle-emitter',[side*.76,-.625,.25],[.095,.073,.10]);
     pebble(g,track,coral,'raider-swept-wingtip',[side*.98,.11,.20],[.10,.20,.13]);
   }
-  pebble(g,track,dark,'raider-canopy-recess',[0,-.07,.42],[.27,.32,.17]);
-  pebble(g,track,lens,'raider-dark-optical-canopy',[0,-.06,.52],[.224,.25,.15]);
-  pebble(g,track,pink,'raider-visor-shine',[-.075,.055,.66],[.065,.085,.025]);
+  pebble(g,track,dark,'raider-canopy-recess',[0,-.07,.50],[.27,.32,.18]);
+  pebble(g,track,lens,'raider-dark-optical-canopy',[0,-.06,.61],[.224,.25,.16]);
+  pebble(g,track,pink,'raider-visor-shine',[-.075,.055,.755],[.065,.085,.025]);
   return seal(g,'raider','raider');
 }
 
