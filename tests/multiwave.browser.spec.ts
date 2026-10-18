@@ -118,12 +118,12 @@ test('非法关卡清单显示可诊断中文错误且不展示伪造敌阵', as
   await expect(page.getByRole('button', { name: '开始', exact: true })).toHaveCount(0);
 });
 
-test('静态资源使用 GitHub Pages 子目录、无第三方运行时资源', async ({ page }) => {
+test('静态资源使用 GitHub Pages 子目录、无第三方运行时资源', async ({ page }, info) => {
+  const allowedBase = new URL(info.project.use.baseURL as string).href;
   const external: string[] = [];
   const failed: string[] = [];
   page.on('request', req => {
-    if (!req.url().startsWith('http://127.0.0.1:4173/React-SpaceInvader/') &&
-        !req.url().startsWith('https://siliconyc.github.io/React-SpaceInvader/')) external.push(req.url());
+    if (!req.url().startsWith(allowedBase)) external.push(req.url());
   });
   page.on('response', response => {
     if (response.status() >= 400) failed.push(response.url() + ' (' + response.status() + ')');
