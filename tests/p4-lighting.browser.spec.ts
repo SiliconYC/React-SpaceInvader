@@ -9,6 +9,8 @@ test('P4/A4 同一状态两个灯光方案、四种屏幕完整正常战斗 WebG
   // The game fills the viewport. Capture the real completed WebGL surface
   // without Playwright waiting for extra animation frames on a software GPU.
   const capture=async(name:string)=>{
+    // Observe a new application render before reading the compositor surface.
+    await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>resolve())));
     const {data}=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
     writeFileSync(info.outputPath(name),Buffer.from(data,'base64'));
   };
@@ -25,6 +27,7 @@ test('P4/A4 同一状态两个灯光方案、四种屏幕完整正常战斗 WebG
       await expect(stage).toHaveAttribute('data-enemy-count','24');
       await expect(stage).toHaveAttribute('data-studio-environment','loaded');
       await expect(stage).toHaveAttribute('data-galaxy','loaded');
+      await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>resolve())));
       const m=await stage.evaluate(el=>({
         draws:+(el.dataset.drawCalls??'0'),geometries:+(el.dataset.gpuGeometries??'0'),
         textures:+(el.dataset.gpuTextures??'0'),assets:+(el.dataset.gpuAssets??'0'),
@@ -40,6 +43,8 @@ test('P4/A4 同一状态两个灯光方案、四种屏幕完整正常战斗 WebG
   await page.setViewportSize({width:1440,height:900});
   await page.goto('./');
   const stage=page.getByTestId('battlefield');
+  await expect(stage).toHaveAttribute('data-studio-environment','loaded');
+  await expect(stage).toHaveAttribute('data-galaxy','loaded');
   await page.getByRole('button',{name:'开始',exact:true}).click();
   await page.keyboard.down('ArrowRight');
   for(let i=0;i<5;i++){

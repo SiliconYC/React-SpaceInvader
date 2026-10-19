@@ -65,15 +65,17 @@ test('P4/D2 两波连贯实战、换波运镜暂停/恢复、胜利镜头复位'
   await page.getByTestId('level-select').selectOption('crossfire');
   await expect(stage).toHaveAttribute('data-enemy-count','1');
   await page.getByRole('button',{name:'开始',exact:true}).click();
-  // Pause via the real UI as soon as the first wave-camera frame is rendered.
+  // Pause via the real UI as soon as a moving wave-camera frame is rendered.
   // A slow software GPU can finish this short cue between two protocol polls.
   await stage.evaluate(el=>{
     const observer=new MutationObserver(()=>{
-      if((el as HTMLElement).dataset.cameraDirector!=='wave')return;
+      const d=(el as HTMLElement).dataset;
+      const progress=Number(d.cameraDirectorProgress),zoom=Number(d.cameraDirectorZoom);
+      if(d.cameraDirector!=='wave'||progress<=0||progress>=1||zoom<=1)return;
       const pause=Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='暂停');
       if(pause){observer.disconnect();pause.click();}
     });
-    observer.observe(el,{attributes:true,attributeFilter:['data-camera-director']});
+    observer.observe(el,{attributes:true,attributeFilter:['data-camera-director-progress','data-camera-director-zoom']});
   });
   await page.keyboard.down('Space');
   await expect(stage).toHaveAttribute('data-waiting-for-wave','true',{timeout:10000});
@@ -81,7 +83,10 @@ test('P4/D2 两波连贯实战、换波运镜暂停/恢复、胜利镜头复位'
   await expect(stage).toHaveAttribute('data-wave','2',{timeout:10000});
   await expect(stage).toHaveAttribute('data-camera-director','wave');
   const movingZoom=Number(await stage.getAttribute('data-camera-director-zoom'));
-  expect(movingZoom).toBeGreaterThanOrEqual(1);
+  expect(movingZoom).toBeGreaterThan(1);
+  const movingProgress=Number(await stage.getAttribute('data-camera-director-progress'));
+  expect(movingProgress).toBeGreaterThan(0);
+  expect(movingProgress).toBeLessThan(1);
   await expect(stage).toHaveAttribute('data-game-phase','paused');
   await page.screenshot({path:info.outputPath('p4-d2-wave-frame-1.png'),fullPage:true});
   const held=await stage.getAttribute('data-camera-director-progress');
