@@ -35,6 +35,7 @@ export default function App() {
 
   const [webgl, setWebgl] = useState<'ready' | 'error' | 'loading' | 'lost'>('loading');
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [levelLoading, setLevelLoading] = useState(true);
   const [levelName, setLevelName] = useState('关卡加载中');
   const [catalog, setCatalog] = useState<LevelCatalog | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -63,6 +64,7 @@ export default function App() {
     if (!selectedId || !host) return;
     const abort = new AbortController();
     setLoadError(null);
+    setLevelLoading(true);
     void loadLevel(selectedId, abort.signal).then(level => {
       if (abort.signal.aborted) return;
       const engine = new GameEngine(GAME_SEED, level.world, level);
@@ -148,6 +150,8 @@ export default function App() {
       if (abort.signal.aborted) return;
       setLoadError(error instanceof Error ? error.message : '关卡加载失败：未知错误');
       if (!sessionRef.current) setWebgl('error');
+    }).finally(() => {
+      if (!abort.signal.aborted) setLevelLoading(false);
     });
     return () => abort.abort();
   }, [selectedId]);
@@ -164,6 +168,7 @@ export default function App() {
   }, [debug]);
 
   const send = (command: GameCommand) => {
+    if (command.type === 'START' && levelLoading) return;
     const engine = engineRef.current;
     if (!engine) return;
     if (command.type === 'START' || command.type === 'RESUME') getAudio().unlock();
@@ -206,7 +211,11 @@ export default function App() {
           {catalog && (
             <select data-testid="level-select" className="level-select" aria-label="选择关卡"
               value={selectedId ?? ''} disabled={state.phase === 'running' || state.phase === 'paused'}
-              onChange={event => setSelectedId(event.target.value)}>
+              onChange={event => {
+                if (event.target.value === selectedId) return;
+                setLevelLoading(true);
+                setSelectedId(event.target.value);
+              }}>
               {catalog.levels.map(entry => <option value={entry.id} key={entry.id}>{entry.name}</option>)}
             </select>
           )}
@@ -288,7 +297,7 @@ export default function App() {
       </nav>
       <div className="play-actions" aria-label="引擎操作">
         {!loadError && webgl === 'ready' && state.phase === 'ready' &&
-          <button type="button" onClick={() => send({ type: 'START' })}>开始</button>}
+          <button type="button" disabled={levelLoading} onClick={() => send({ type: 'START' })}>开始</button>}
         {state.phase === 'running' && <button type="button" onClick={() => send({ type: 'PAUSE' })}>暂停</button>}
         {state.phase === 'paused' && <button type="button" onClick={() => send({ type: 'RESUME' })}>继续</button>}
         {(state.phase === 'ended' || state.phase === 'won' || state.phase === 'lost') &&
