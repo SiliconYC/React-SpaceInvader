@@ -17,25 +17,23 @@ export class RingedPlanet {
   constructor(parent:THREE.Group,inspectSide=false){
     this.debugSide=inspectSide;
     this.group.name='p4-sculpted-ringed-planet';
-    const geo=new THREE.SphereGeometry(1,40,28).toNonIndexed();
+    const geo=new THREE.SphereGeometry(1,28,18).toNonIndexed();
     const p=geo.getAttribute('position');
     const colors=new Float32Array(p.count*3);
-    const belt=[0x8fbac8,0x86aec5,0xbcc9df,0xa9a1d6,0xdbb8d4,0x89b6c6];
+    const belt=[0x89acbd,0xa6c2cc,0xc6c6db,0xaaa0cc,0x95b9c8];
     const temp=new THREE.Color();
     for(let i=0;i<p.count;i++){
       const y=p.getY(i),x=p.getX(i),z=p.getZ(i);
       const phi=Math.atan2(z,x);
-      // Each latitude wanders slightly with longitude; broad strips + thin weather bands.
-      const latitude=y+.037*Math.sin(phi*3+y*11)+.014*Math.sin(phi*7-y*19);
+      // Broad pastel bands and clean lit facets, not a noisy photographic surface.
+      const latitude=y+.025*Math.sin(phi*2);
       const band=Math.min(belt.length-1,Math.max(0,Math.floor((latitude+1)*belt.length/2)));
-      const turbulence=.96+.035*Math.sin(phi*9+latitude*42);
-      const thin=.93+.06*Math.sin(latitude*87+phi*2);
-      temp.setHex(belt[band]).multiplyScalar(turbulence*thin);
+      temp.setHex(belt[band]);
       temp.toArray(colors,i*3);
     }
     geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
     const bodyMaterial=new THREE.MeshStandardMaterial({
-      vertexColors:true,roughness:.86,metalness:.04,
+      vertexColors:true,flatShading:true,roughness:.80,metalness:.02,envMapIntensity:.12,
       emissive:0x243d52,emissiveIntensity:.09,depthTest:true,depthWrite:true,
     });
     this.sphere=new THREE.Mesh(geo,bodyMaterial);
@@ -48,12 +46,8 @@ export class RingedPlanet {
     const tints=new Float32Array(v.count*3);
     for(let i=0;i<v.count;i++){
       const radius=Math.hypot(v.getX(i),v.getY(i));
-      const angle=Math.atan2(v.getY(i),v.getX(i));
       const phase=(radius-1.34)/.79;
-      const lane=.58+.21*Math.sin(phase*40)+.12*Math.cos(phase*107);
-      const split=phase>.35&&phase<.41?.34:phase>.72&&phase<.77?.43:1;
-      const col=new THREE.Color().setHSL(.55+.035*Math.sin(phase*7+angle*.4),.32,
-        (.40+.22*phase)*lane*split+.14);
+      const col=new THREE.Color(phase<.34?0x90adbc:phase<.43?0x354b67:phase<.82?0xb8b5c9:0x819eae);
       col.toArray(tints,i*3);
     }
     annulus.setAttribute('color',new THREE.BufferAttribute(tints,3));

@@ -1,0 +1,8 @@
+{
+  "generator": "scripts/bake-studio-environment.mjs",
+  "width": 768,
+  "height": 1024,
+  "range": 64,
+  "maximum": 56.3125,
+  "sha256": "6e3887684d369f158b4ea228523277962ead2e4800b5d32dec5c3b36fe7b84af"
+}

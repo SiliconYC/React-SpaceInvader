@@ -36,3 +36,14 @@ test('P4/A4 两套可复现真实方向光而非后处理，保留批量材质',
   assert.ok(studio[2].intensity>soft[2].intensity,'主光受光方向更清楚');
   assert.ok(studio.every(l=>l.intensity<2));
 });
+
+test('玩具光棚：主光提供真实部件阴影，阴影只覆盖战斗实体且 frustum 包住战场',()=>{
+  const scene=new THREE.Scene();
+  const lights=installP3Lighting(scene);
+  const key=lights.find(l=>l instanceof THREE.DirectionalLight && l.castShadow) as THREE.DirectionalLight|undefined;
+  assert.ok(key,'部件必须真实投影，不能只改色板');
+  assert.ok(key.shadow.camera.left<=-24 && key.shadow.camera.right>=24);
+  assert.ok(key.shadow.camera.top>=20 && key.shadow.camera.bottom<=-20);
+  assert.ok(key.shadow.mapSize.x>=2048);
+  assert.ok(key.shadow.normalBias>0 && key.shadow.normalBias<.05);
+});

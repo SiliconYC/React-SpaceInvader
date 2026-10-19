@@ -423,7 +423,7 @@ h1 { margin: 0; font-size: clamp(18px, 2vw, 24px); line-height: 1.2; font-weight
 .play-actions .secondary {background:rgba(7,23,40,.67);border-color:rgba(172,204,223,.45);
   color:#e8f4f8;box-shadow:none}
 .play-actions .secondary:hover {background:rgba(35,66,91,.9)}
-.control-hint {color:#d2e2ed;bottom:clamp(91px,12vh,112px);
+.control-hint {color:#d2e2ed;top:110px;bottom:auto;left:32px;transform:none;text-align:left;
   font-size:12px;font-weight:500;letter-spacing:.015em;
   text-shadow:0 2px 8px rgba(0,0,0,.92)}
 .control-hint span {color:#b8cddd}

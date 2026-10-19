@@ -97,7 +97,7 @@ test('P4/A3 Scout 在 24/40 架情况下共用实体翼型与镜头可见单眼'
   const scout=enemies.scout;
   const wing=(scout.children as THREE.Mesh[]).filter(x=>x.name.endsWith('airfoil'));
   assert.equal(wing.length,2);
-  assert.ok(wing.every(x=>x.geometry.type==='BufferGeometry'));
+  assert.ok(wing.every(x=>x.geometry instanceof THREE.BufferGeometry && x.geometry.getAttribute('normal').count>20));
   assert.ok((scout.children as THREE.Mesh[]).some(x=>x.name==='scout-main-single-optic'));
   const dims=new THREE.Box3().setFromObject(scout).getSize(new THREE.Vector3());
   assert.ok(dims.x>1.7&&dims.x<2.1);
@@ -126,4 +126,27 @@ test('#101 商业玩具形体：大独眼、圆肩双炮、厚盾、原始 XY �
   assert.ok(bound(player).x<=2.5&&bound(enemies.scout).x<2.1);
   assert.ok([player,...Object.values(enemies)].every(g=>g.children.every(x=>x instanceof THREE.Mesh)));
   resources.forEach(x=>x.dispose());
+});
+
+test('四机型接触遮蔽来自当前真实网格，源变更不能误用过期烘焙',async()=>{
+  const {createHash}=await import('node:crypto');
+  const {SHIP_OCCLUSION_HASHES}=await import('../src/render/ShipOcclusion.ts');
+  const resources:Array<THREE.BufferGeometry|THREE.Material>=[];
+  const t=createShipTemplates(resources);
+  for(const [kind,g] of Object.entries({player:t.player,...t.enemies})){
+    let shaded=0;
+    g.children.forEach((part,index)=>{
+      const m=part as THREE.Mesh;m.updateMatrix();
+      const p=m.geometry.getAttribute('position'),n=m.geometry.getAttribute('normal');
+      const hash=createHash('sha256').update(JSON.stringify([Array.from(p.array),Array.from(n.array),m.matrix.elements])).digest('hex');
+      assert.equal(SHIP_OCCLUSION_HASHES[kind+'/'+index],hash,'模型更新后须重新烘焙 AO');
+      const ao=m.geometry.getAttribute('color');
+      assert.ok(ao&&ao.count===p.count,'烘焙必须实际附着于当前顶点');
+      const values=Array.from(ao.array);
+      shaded+=values.filter(v=>v<245).length;
+      assert.ok(Math.max(...values)>100,'遮蔽不能让零件变黑');
+    });
+    assert.ok(shaded>100,'实体接缝须有接触遮蔽，而非全白占位数据');
+  }
+  resources.forEach(r=>r.dispose());
 });

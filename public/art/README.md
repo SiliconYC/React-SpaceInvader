@@ -17,3 +17,8 @@
 2026-10-17，使用开源 NumPy 与 Pillow，以确定性种子独立绘制。没有使用外部第三方图像或任何嵌入的舰船、行星、岩石、HUD。生成方式：`python scripts/art/generate_galaxy.py --variant 2 --output public/art/backgrounds`；源码脚本可完整重建**真正入库的 PNG 与 WebP**。比较过 v1（低紫云对比）与 v2（两侧稍显著的蓝紫星云），保留 v2：中心交战区域仍抑制星光，留出激光、敌机和信息的高对比度。目标源画尺寸 1600×900，运行时 WebP 6.5KB 远低于 300KB。浏览器按宽高比执行 cover 裁切，纵屏优先保护中央交战区域。背景下载失败时仅保留深蓝色替代面，不改变玩法。
 
 确认：真正 binary 文件与源代码均为 GitHub 仓库文件，不是仅在聊天展示的图片或依赖 CDN 的链接。一次性图片生成工作流用于提交二进制图片，完成后从长期 CI 中移除，不加入游戏运行依赖。
+
+## #101 重雕（2026-10-19）
+
+- `studio-cubeuv.png`：预滤波柔光棚 CubeUV 反射图，768×1024，165,989 B。由 `scripts/bake-studio-environment.mjs` 使用已锁定 Three.js 0.180.0 内置 MIT 许可 `RoomEnvironment` 离线生成；真实生成元数据见 `docs/art/studio-cubeuv.json`。PNG 使用 sRGB 编码、线性色值缩小 64 倍，运行时 `StudioEnvironment.ts` 还原强度；没有网络 HDR、运行时 PMREM 或外部 CDN。脚本为可编辑源，PNG 即网页实际加载的优化输出。
+- `backgrounds/toy-orbit.svg`：保留 #101 原创可编辑源，降低雾层亮度，移除弧线与十字星；SVG 即运行文件，无另造源图。四种飞船全部由 `src/render/ShipModels.ts` 实时生成；`ShipOcclusion.ts` 是 Blender 5.2.2 按真实网格射线烘焙的顶点接触遮蔽数据，不是模型贴图或截图。生成命令与参数见返工文档。

@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
 <defs>
-  <radialGradient id="mid"><stop offset="0" stop-color="#101a37"/><stop offset=".61" stop-color="#152341"/><stop offset="1" stop-color="#22335b"/></radialGradient>
-  <radialGradient id="a"><stop stop-color="#87b1d4" stop-opacity=".70"/><stop offset=".48" stop-color="#5775bd" stop-opacity=".28"/><stop offset="1" stop-color="#5775bd" stop-opacity="0"/></radialGradient>
-  <radialGradient id="b"><stop stop-color="#7ed5c2" stop-opacity=".46"/><stop offset=".45" stop-color="#5e9fac" stop-opacity=".20"/><stop offset="1" stop-color="#5e9fac" stop-opacity="0"/></radialGradient>
-  <radialGradient id="c"><stop stop-color="#b18bcb" stop-opacity=".44"/><stop offset=".46" stop-color="#8062ad" stop-opacity=".18"/><stop offset="1" stop-color="#8062ad" stop-opacity="0"/></radialGradient>
-  <radialGradient id="d"><stop stop-color="#f7bd95" stop-opacity=".32"/><stop offset=".52" stop-color="#ac7fba" stop-opacity=".13"/><stop offset="1" stop-color="#ac7fba" stop-opacity="0"/></radialGradient>
+  <radialGradient id="mid"><stop offset="0" stop-color="#101c30"/><stop offset=".61" stop-color="#13213a"/><stop offset="1" stop-color="#273450"/></radialGradient>
+  <radialGradient id="a"><stop stop-color="#87b1d4" stop-opacity=".33"/><stop offset=".48" stop-color="#5775bd" stop-opacity=".28"/><stop offset="1" stop-color="#5775bd" stop-opacity="0"/></radialGradient>
+  <radialGradient id="b"><stop stop-color="#7ed5c2" stop-opacity=".23"/><stop offset=".45" stop-color="#5e9fac" stop-opacity=".20"/><stop offset="1" stop-color="#5e9fac" stop-opacity="0"/></radialGradient>
+  <radialGradient id="c"><stop stop-color="#b18bcb" stop-opacity=".25"/><stop offset=".46" stop-color="#8062ad" stop-opacity=".18"/><stop offset="1" stop-color="#8062ad" stop-opacity="0"/></radialGradient>
+  <radialGradient id="d"><stop stop-color="#f7bd95" stop-opacity=".21"/><stop offset=".52" stop-color="#ac7fba" stop-opacity=".13"/><stop offset="1" stop-color="#ac7fba" stop-opacity="0"/></radialGradient>
   <radialGradient id="glow"><stop stop-color="#fff3c9" stop-opacity=".65"/><stop offset="1" stop-color="#fff3c9" stop-opacity="0"/></radialGradient>
   <filter id="mist" x="-.4" y="-.4" width="1.8" height="1.8"><feGaussianBlur stdDeviation="35"/></filter>
 </defs>
@@ -17,8 +17,8 @@
  <ellipse cx="1520" cy="880" rx="780" ry="300" fill="url(#c)"/>
  <ellipse cx="850" cy="-110" rx="580" ry="200" fill="url(#c)"/>
 </g>
-<path d="M0 170 Q240 20 535 70 T1000 10" fill="none" stroke="#a5badc" stroke-width="3" opacity=".065"/>
-<path d="M1120 900 Q1420 660 1600 620" fill="none" stroke="#bddde0" stroke-width="4" opacity=".07"/>
+
+
 <g><circle cx="71.0" cy="113.0" r="2.35" fill="#cffff2" opacity="0.64"/>
 <circle cx="208.7" cy="430.1" r="0.75" fill="#fff0d8" opacity="0.27"/>
 <circle cx="346.5" cy="747.2" r="0.75" fill="#fff0d8" opacity="0.27"/>
@@ -113,15 +113,15 @@
 <circle cx="1404.4" cy="169.1" r="2.35" fill="#fff0d8" opacity="0.64"/>
 <circle cx="1542.2" cy="486.2" r="0.75" fill="#cffff2" opacity="0.27"/>
 <circle cx="79.9" cy="803.3" r="0.75" fill="#fff0d8" opacity="0.27"/>
-<circle cx="217.6" cy="220.4" r="0.75" fill="#fff0d8" opacity="0.27"/><path d="M140 112H154 M147 105V119" stroke="#d7d8ff" stroke-width="1.1" stroke-linecap="round" opacity=".48"/>
-<path d="M379 269H393 M386 262V276" stroke="#a1cddd" stroke-width="1.1" stroke-linecap="round" opacity=".48"/>
-<path d="M618 426H632 M625 419V433" stroke="#d7d8ff" stroke-width="1.1" stroke-linecap="round" opacity=".48"/>
-<path d="M857 583H871 M864 576V590" stroke="#a1cddd" stroke-width="1.1" stroke-linecap="round" opacity=".48"/>
-<path d="M1096 740H1110 M1103 733V747" stroke="#d7d8ff" stroke-width="1.1" stroke-linecap="round" opacity=".48"/>
-<path d="M1335 67H1349 M1342 60V74" stroke="#a1cddd" stroke-width="1.1" stroke-linecap="round" opacity=".48"/>
-<path d="M14 224H28 M21 217V231" stroke="#d7d8ff" stroke-width="1.1" stroke-linecap="round" opacity=".48"/>
-<path d="M253 381H267 M260 374V388" stroke="#a1cddd" stroke-width="1.1" stroke-linecap="round" opacity=".48"/>
-<path d="M492 538H506 M499 531V545" stroke="#d7d8ff" stroke-width="1.1" stroke-linecap="round" opacity=".48"/></g>
+<circle cx="217.6" cy="220.4" r="0.75" fill="#fff0d8" opacity="0.27"/>
+
+
+
+
+
+
+
+</g>
 <!-- Sparse hand-positioned warm, very soft pin lights rather than photographic noise. -->
 <circle cx="208" cy="158" r="34" fill="url(#glow)" opacity=".20"/>
 <circle cx="1342" cy="743" r="25" fill="url(#glow)" opacity=".22"/>

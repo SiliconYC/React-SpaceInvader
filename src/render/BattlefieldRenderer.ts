@@ -3,6 +3,8 @@ import type { GameSnapshot, GameEvent } from '../core/engine.ts';
 import type { EnemyKind, EnemyState } from '../core/level.ts';
 import type { Point2, World2 } from '../core/world.ts';
 import { createShipTemplates } from './ShipModels.ts';
+import { shipRenderParts } from './ShipBatches.ts';
+import { StudioEnvironment } from './StudioEnvironment.ts';
 import { enemyVisualPose } from './EnemyShipMotion.ts';
 import { PlayerShipMotion } from './PlayerShipMotion.ts';
 import { CombatFX } from './CombatFX.ts';
@@ -35,6 +37,8 @@ export class BattlefieldRenderer {
   private baseCameraY = 0;
   private baseCameraDistance = 50;
   private readonly world: Readonly<World2>;
+  private readonly studioEnvironment:StudioEnvironment;
+  private readonly studioLights:readonly THREE.Light[];
   private readonly resources: Array<THREE.BufferGeometry | THREE.Material> = [];
   private readonly grid: THREE.LineSegments;
   private readonly playerMesh: THREE.Group;
@@ -110,6 +114,12 @@ export class BattlefieldRenderer {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = P3_LIGHTING.toneMappingExposure;
+    this.renderer.shadowMap.enabled=this.lightVariant==='studio'&&new URLSearchParams(window.location.search).get('shadow')==='live';
+    this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    this.studioEnvironment=new StudioEnvironment(host);
+    this.scene.environment=this.studioEnvironment.texture;
+    this.scene.environmentIntensity=StudioEnvironment.intensity;
+    this.renderer.info.autoReset=false;
     this.renderer.domElement.dataset.renderer = 'threejs';
     host.appendChild(this.renderer.domElement);
 
@@ -117,6 +127,7 @@ export class BattlefieldRenderer {
     this.camera.position.set(0, 0, 50);
     this.camera.lookAt(0, 0, 0);
     const lights=installP3Lighting(this.scene,this.lightVariant);
+    this.studioLights=lights;
     this.host.dataset.p4Lighting=this.lightVariant;
     lights[3].color.setHex(theme.rimTint);
     this.host.dataset.p3LightRig='4';
@@ -162,7 +173,11 @@ export class BattlefieldRenderer {
     // Authoritative XY anchor never rotates; only the child render model moves in 3D.
     this.playerMesh = new THREE.Group();
     this.playerMesh.name='authoritative-player-xy';
-    this.playerVisual = templates.player;
+    this.playerVisual = new THREE.Group();
+    const movingParts=new Set(['engine-core','left-toy-wing-inlay','right-toy-wing-inlay',
+      'scout-main-single-optic','scout-eye-catchlight','raider-muzzle-emitter',
+      'guardian-three-dimensional-energy-lens']);
+    this.playerVisual.add(...shipRenderParts(templates.player,this.resources,movingParts));
     this.playerVisual.traverse(part=>{
       if(part instanceof THREE.Mesh && part.name==='engine-core')this.engineCores.push(part);
       if(part instanceof THREE.Mesh && part.name.endsWith('toy-wing-inlay'))this.toyFins.push(part);
@@ -173,11 +188,12 @@ export class BattlefieldRenderer {
     // to share the same few GPU draw calls, independent of total alive instances.
     for(const kind of ['scout','raider','guardian'] as const){
       const prototype=templates.enemies[kind];
-      for(const part of prototype.children){
+      for(const part of shipRenderParts(prototype,this.resources,movingParts)){
         if(!(part instanceof THREE.Mesh))continue;
         part.updateMatrix();
         const instances=new THREE.InstancedMesh(part.geometry,part.material,256);
         instances.count=0;
+        instances.castShadow=part.castShadow;instances.receiveShadow=part.receiveShadow;
         instances.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
         instances.frustumCulled=false;
         this.enemyBatches[kind].push({mesh:instances,localMatrix:part.matrix.clone(),name:part.name});
@@ -413,8 +429,11 @@ export class BattlefieldRenderer {
     this.host.dataset.pendingWaves = String(state.pendingWaves);
     this.host.dataset.waitingForWave = String(state.waitingForWave);
     this.host.dataset.score = String(state.score);
+    this.renderer.info.reset();
     this.renderer.render(this.scene, this.camera);
     this.host.dataset.drawCalls=String(this.renderer.info.render.calls);
+    this.host.dataset.renderTriangles=String(this.renderer.info.render.triangles);
+    this.host.dataset.toyShading='vertex-contact-ao+studio-ibl'+(this.renderer.shadowMap.enabled?'+pcf-shadow':'');
     this.host.dataset.gpuGeometries=String(this.renderer.info.memory.geometries);
     this.host.dataset.gpuTextures=String(this.renderer.info.memory.textures);
     this.host.dataset.shipPreview=this.modelPreview??'off';
@@ -578,6 +597,9 @@ export class BattlefieldRenderer {
     this.foregroundRocks.dispose();
     this.layers.dispose();
     for (const resource of this.resources) resource.dispose();
+    this.scene.environment=null;
+    this.studioEnvironment.dispose();
+    this.studioLights.forEach(light=>{if(light instanceof THREE.DirectionalLight)light.shadow.dispose();});
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
