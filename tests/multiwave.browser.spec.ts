@@ -109,6 +109,30 @@ test('非法切换关卡明确报错，旧规则状态与 Three.js 画布不被�
   await expect(stage).toHaveAttribute('data-game-phase', 'running');
 });
 
+test('切关请求尚未完成时不能启动旧会话，完成后启动新关卡', async ({ page }) => {
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/levels/crossfire.json', async route => {
+    await pending;
+    await route.continue();
+  });
+  await page.goto('./');
+  await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
+  // Selecting the already active option must not leave loading latched on.
+  const start = page.getByRole('button', { name: '开始', exact: true });
+  await page.getByTestId('level-select').selectOption('first-contact');
+  await expect(start).toBeEnabled();
+  await page.getByTestId('level-select').selectOption('crossfire');
+  try {
+    await expect(start).toBeDisabled();
+  } finally { release(); }
+  await expect(start).toBeEnabled();
+  const stage = page.getByTestId('battlefield');
+  await expect(stage).toHaveAttribute('data-enemy-count', '12');
+  await start.click();
+  await expect(stage).toHaveAttribute('data-game-phase', 'running');
+});
+
 test('非法关卡清单显示可诊断中文错误且不展示伪造敌阵', async ({ page }) => {
   await page.route('**/levels/index.json', route =>
     route.fulfill({ contentType: 'application/json', body: JSON.stringify({schemaVersion: 1, levels: []}) }));

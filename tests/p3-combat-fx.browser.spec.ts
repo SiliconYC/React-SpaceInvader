@@ -37,6 +37,9 @@ test('P3/D2：减少动态效果保留规则射击和结果，不额外分配渲
   await page.goto('./');
   const stage=page.getByTestId('battlefield');
   await expect(page.getByTestId('webgl-status')).toContainText('WebGL 正常');
+  // The async reflection image is a persistent texture, not a combat allocation.
+  await expect(stage).toHaveAttribute('data-studio-environment','loaded');
+  await expect(stage).toHaveAttribute('data-gpu-textures','2');
   const textures=await stage.getAttribute('data-gpu-textures');
   await page.getByRole('button',{name:'开始',exact:true}).click();
   await page.keyboard.down('Space');
